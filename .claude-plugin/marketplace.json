@@ -1,0 +1,20 @@
+{
+  "name": "ecorheim-plugins",
+  "owner": {
+    "name": "ecorheim"
+  },
+  "metadata": {
+    "description": "Claude Code plugins by ecorheim",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "conversation-logger",
+      "source": "./",
+      "description": "Automatically logs Claude Code conversations. Records prompts and responses chronologically in a single file with tool usage tracking.",
+      "version": "0.1.0",
+      "keywords": ["logging", "conversation", "hooks", "transcript", "debugging"],
+      "category": "productivity"
+    }
+  ]
+}
