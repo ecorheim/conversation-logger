@@ -8,15 +8,13 @@ import sys
 import os
 from datetime import datetime
 
+# Add scripts directory to path for utils import
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from utils import setup_encoding, get_log_dir, get_log_file_path, get_log_format, write_temp_session
+
 # Ensure stdout/stderr can handle Unicode on Windows
-if sys.platform == "win32":
-    import io
-    if hasattr(sys.stdin, 'buffer'):
-        sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
-    if hasattr(sys.stdout, 'buffer'):
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    if hasattr(sys.stderr, 'buffer'):
-        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+setup_encoding()
+
 
 def log_prompt():
     try:
@@ -27,31 +25,33 @@ def log_prompt():
         session_id = input_data.get("session_id", "")
         cwd = input_data.get("cwd", os.getcwd())
 
-        # Set up log directory (project root/.claude/logs)
-        log_dir = os.path.join(cwd, ".claude", "logs")
-        os.makedirs(log_dir, exist_ok=True)
+        # Set up log directory
+        log_dir = get_log_dir(cwd)
 
-        # Log file (per date + session)
-        date_prefix = datetime.now().strftime('%Y-%m-%d')
-        log_file = os.path.join(log_dir, f"{date_prefix}_{session_id}_conversation-log.txt")
+        # Determine log format from config
+        log_format = get_log_format(cwd)
+
+        # Log file path
+        log_file = get_log_file_path(log_dir, session_id, log_format)
 
         # Write prompt to log
+        timestamp = datetime.now().strftime('%H:%M:%S')
+
         with open(log_file, 'a', encoding='utf-8') as f:
-            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            f.write(f"\n{'='*80}\n")
-            f.write(f"[{timestamp}] Session: {session_id}\n")
-            f.write(f"{'='*80}\n")
-            f.write(f"👤 USER:\n{prompt}\n")
-            f.write(f"{'-'*80}\n")
+            if log_format == "markdown":
+                _write_prompt_markdown(f, log_file, prompt, session_id, timestamp)
+            else:
+                _write_prompt_text(f, prompt, session_id, timestamp)
 
         # Save temporary session info (used by response hook)
-        temp_file = os.path.join(log_dir, f".temp_session_{session_id}.json")
-        with open(temp_file, 'w', encoding='utf-8') as f:
-            json.dump({
-                "session_id": session_id,
-                "prompt_timestamp": datetime.now().isoformat(),
-                "prompt": prompt
-            }, f)
+        write_temp_session(log_dir, session_id, {
+            "session_id": session_id,
+            "prompt_timestamp": datetime.now().isoformat(),
+            "prompt": prompt,
+            "cwd": cwd,
+            "log_format": log_format,
+            "log_file_path": log_file
+        })
 
         print("Prompt logged", file=sys.stderr)
 
@@ -61,6 +61,36 @@ def log_prompt():
     except Exception as e:
         print(f"Error logging prompt: {e}", file=sys.stderr)
         sys.exit(1)
+
+
+def _write_prompt_text(f, prompt, session_id, timestamp):
+    """Write prompt in text format."""
+    full_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    f.write(f"\n{'='*80}\n")
+    f.write(f"[{full_timestamp}] Session: {session_id}\n")
+    f.write(f"{'='*80}\n")
+    f.write(f"\U0001f464 USER:\n{prompt}\n")
+    f.write(f"{'-'*80}\n")
+
+
+def _write_prompt_markdown(f, log_file, prompt, session_id, timestamp):
+    """Write prompt in markdown format."""
+    # Write document header if file is new/empty
+    file_size = 0
+    try:
+        file_size = os.path.getsize(log_file)
+    except OSError:
+        pass
+
+    if file_size == 0:
+        date_str = datetime.now().strftime('%Y-%m-%d')
+        f.write(f"# Conversation Log \u2014 {date_str}\n")
+
+    f.write(f"\n---\n\n")
+    f.write(f"## \U0001f464 User \u2014 {timestamp}\n")
+    f.write(f"> Session: `{session_id}`\n\n")
+    f.write(f"{prompt}\n")
+
 
 if __name__ == "__main__":
     log_prompt()
