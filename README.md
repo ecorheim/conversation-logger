@@ -41,7 +41,8 @@ claude --plugin-dir ./conversation-logger
 ### Requirements
 
 - Claude Code v1.0.33 or later
-- Python 3.6 or later
+- Python 3.6 or later (`python` must be available in PATH)
+  - Windows: Ensure "Add Python to PATH" is checked during installation
 
 ## Log Format
 

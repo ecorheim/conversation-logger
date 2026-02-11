@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Claude Code Hook: Unified Conversation Logging (Prompt)
 Triggered on UserPromptSubmit events to save user input and record temporary session info.

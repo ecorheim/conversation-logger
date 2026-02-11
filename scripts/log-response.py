@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Claude Code Hook: Unified Conversation Logging (Response)
 Triggered on Stop events to record all terminal output.

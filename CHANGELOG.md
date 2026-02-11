@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1] - 2026-02-11
+
+### Fixed
+- Replace python3 with python for Windows compatibility
+  - hooks/hooks.json: Update command entries to use 'python' instead of 'python3'
+  - scripts/log-prompt.py, scripts/log-response.py: Update shebang lines
+  - Impact: Plugin now works on Windows where 'python3' command is not available
+
 ## [0.1.0] - 2026-02-11
 
 ### Added
