@@ -8,67 +8,79 @@ import json
 import sys
 import os
 from datetime import datetime
-import glob
+
+# Add scripts directory to path for utils import
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from utils import (
+    setup_encoding, get_log_dir, get_log_file_path, get_log_format,
+    read_temp_session, cleanup_stale_temp_files, debug_log, calculate_fence
+)
 
 # Ensure stdout/stderr can handle Unicode on Windows
-if sys.platform == "win32":
-    import io
-    if hasattr(sys.stdin, 'buffer'):
-        sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
-    if hasattr(sys.stdout, 'buffer'):
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    if hasattr(sys.stderr, 'buffer'):
-        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+setup_encoding()
 
-DEBUG = False  # Debug mode
-
-def debug_log(log_dir, message):
-    """Write debug log entry."""
-    if not DEBUG:
-        return
-    try:
-        debug_file = os.path.join(log_dir, "debug-response.log")
-        with open(debug_file, 'a', encoding='utf-8') as f:
-            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            f.write(f"[{timestamp}] {message}\n")
-    except:
-        pass
 
 def format_tool_input(tool_name, tool_input):
-    """Format tool input in terminal style."""
+    """Format tool input in terminal style (no truncation)."""
     if not tool_input:
-        return f"● {tool_name}()"
+        return f"\u25cf {tool_name}()"
 
-    # Show only key parameters briefly
+    # Show key parameters
     params = []
     for key in ['pattern', 'command', 'file_path', 'path', 'query', 'description']:
         if key in tool_input:
             value = tool_input[key]
             if isinstance(value, str):
-                # Truncate long values
-                if len(value) > 60:
-                    value = value[:57] + "..."
                 params.append(f"{key}={value}")
 
     if params:
-        return f"● {tool_name}({', '.join(params)})"
-    return f"● {tool_name}(...)"
+        return f"\u25cf {tool_name}({', '.join(params)})"
+    return f"\u25cf {tool_name}(...)"
 
-def format_tool_result(content, max_lines=10):
-    """Format tool result in terminal style."""
+
+def format_tool_result(content):
+    """Format tool result in terminal style (no truncation)."""
     if not content:
-        return "  ⎿  (no output)"
+        return "  \u23bf  (no output)"
 
     lines = content.strip().split('\n')
-    if len(lines) <= max_lines:
-        formatted = '\n'.join([f"  ⎿  {line}" for line in lines])
-    else:
-        # Show first few lines and truncate the rest
-        shown = lines[:max_lines-1]
-        formatted = '\n'.join([f"  ⎿  {line}" for line in shown])
-        formatted += f"\n  ⎿  ... +{len(lines) - max_lines + 1} lines"
-
+    formatted = '\n'.join([f"  \u23bf  {line}" for line in lines])
     return formatted
+
+
+def format_tool_input_md(tool_name, tool_input):
+    """Format tool input as markdown heading with blockquote params."""
+    # Heading
+    heading = f"### \U0001f6e0\ufe0f Tool: `{tool_name}`"
+
+    if not tool_input:
+        return heading
+
+    # Key parameters as blockquote
+    params = []
+    for key in ['pattern', 'command', 'file_path', 'path', 'query', 'description',
+                 'old_string', 'new_string', 'content', 'url', 'prompt']:
+        if key in tool_input:
+            value = tool_input[key]
+            if isinstance(value, str):
+                # For display in blockquote, keep single-line
+                display_val = value.replace('\n', ' ').strip()
+                params.append(f"{key}={display_val}")
+
+    if params:
+        return f"{heading}\n> {', '.join(params)}"
+    return heading
+
+
+def format_tool_result_md(content):
+    """Format tool result as markdown code block with dynamic fence."""
+    if not content:
+        return ""
+
+    text = content.strip()
+    fence = calculate_fence(text)
+    return f"{fence}\n{text}\n{fence}"
+
 
 def extract_full_content(entry):
     """Extract full content from entry in terminal format."""
@@ -82,20 +94,21 @@ def extract_full_content(entry):
             if item.get("type") == "text":
                 text = item.get("text", "")
                 if text.strip():
-                    parts.append(("text", f"● {text}"))
+                    parts.append(("text", text.strip()))
 
             elif item.get("type") == "tool_use":
                 tool_name = item.get("name", "unknown")
                 tool_input = item.get("input", {})
-                formatted = format_tool_input(tool_name, tool_input)
-                parts.append(("tool_use", formatted))
+                parts.append(("tool_use", {
+                    "name": tool_name,
+                    "input": tool_input
+                }))
 
     # Tool result (tool execution output)
     elif entry_type == "tool_result":
         content = entry.get("content", "")
         if isinstance(content, str) and content.strip():
-            formatted = format_tool_result(content)
-            parts.append(("tool_result", formatted))
+            parts.append(("tool_result", content.strip()))
         elif isinstance(content, list):
             texts = []
             for item in content:
@@ -105,10 +118,10 @@ def extract_full_content(entry):
                         texts.append(text)
             if texts:
                 combined = '\n'.join(texts)
-                formatted = format_tool_result(combined)
-                parts.append(("tool_result", formatted))
+                parts.append(("tool_result", combined.strip()))
 
     return parts
+
 
 def classify_user_entry(entry):
     """Classify user-type entries to determine processing method."""
@@ -149,6 +162,7 @@ def classify_user_entry(entry):
 
     return "UNKNOWN"
 
+
 def extract_user_interaction(entry, classification):
     """Extract user's actual answer/feedback from follow-up interactions."""
     message = entry.get("message", {})
@@ -184,6 +198,83 @@ def extract_user_interaction(entry, classification):
 
     return ""
 
+
+def _format_output_text(all_outputs):
+    """Format collected outputs for text format."""
+    formatted_parts = []
+    for part_type, content in all_outputs:
+        if part_type == "text":
+            formatted_parts.append(f"\u25cf {content}")
+        elif part_type == "tool_use":
+            formatted_parts.append(format_tool_input(content["name"], content["input"]))
+        elif part_type == "tool_result":
+            formatted_parts.append(format_tool_result(content))
+        elif part_type == "tool_rejection":
+            formatted_parts.append(content)
+        elif part_type == "interrupt":
+            formatted_parts.append(content)
+    return formatted_parts
+
+
+def _format_output_markdown(all_outputs):
+    """Format collected outputs for markdown format."""
+    formatted_parts = []
+    for part_type, content in all_outputs:
+        if part_type == "text":
+            formatted_parts.append(content)
+        elif part_type == "tool_use":
+            formatted_parts.append(format_tool_input_md(content["name"], content["input"]))
+        elif part_type == "tool_result":
+            md_result = format_tool_result_md(content)
+            if md_result:
+                formatted_parts.append(md_result)
+        elif part_type == "tool_rejection":
+            # Extract text from the formatted string
+            if "user message:" in content:
+                reason = content.split("user message:", 1)[-1].strip()
+                formatted_parts.append(f"> **Tool Rejected**: {reason}")
+            else:
+                formatted_parts.append("> **Tool Rejected**")
+        elif part_type == "interrupt":
+            formatted_parts.append("> **Interrupted**")
+    return formatted_parts
+
+
+def _write_followups_text(f, follow_ups):
+    """Write follow-up interactions in text format."""
+    for label, text in follow_ups:
+        if text:
+            f.write(f"\U0001f464 USER ({label}):\n{text}\n")
+        else:
+            f.write(f"\U0001f464 USER ({label})\n")
+        f.write(f"{'-'*80}\n")
+
+
+def _write_followups_markdown(f, follow_ups):
+    """Write follow-up interactions in markdown format."""
+    timestamp = datetime.now().strftime('%H:%M:%S')
+    for label, text in follow_ups:
+        if label == "answer":
+            f.write(f"\n## \U0001f4ac User \u2014 {timestamp}\n")
+            f.write(f"> **Answer**\n\n")
+        elif label == "plan approved":
+            f.write(f"\n## \u2705 User \u2014 {timestamp}\n")
+            f.write(f"> **Plan Approved**\n\n")
+        elif label == "tool rejected":
+            f.write(f"\n## \u274c User \u2014 {timestamp}\n")
+            reason = text if text else ""
+            f.write(f"> **Tool Rejected**: {reason}\n\n") if reason else f.write(f"> **Tool Rejected**\n\n")
+        elif label == "interrupt":
+            f.write(f"\n## \u26a1 User \u2014 {timestamp}\n")
+            f.write(f"> **Interrupted**\n\n")
+        else:
+            f.write(f"\n## \U0001f4ac User \u2014 {timestamp}\n")
+            f.write(f"> **{label}**\n\n")
+
+        if text and label not in ("tool rejected",):
+            f.write(f"{text}\n")
+
+
 def log_response():
     try:
         # Read JSON data from stdin
@@ -197,9 +288,8 @@ def log_response():
         session_id = input_data.get("session_id", "")
         cwd = input_data.get("cwd", os.getcwd())
 
-        # Log directory (project root/.claude/logs)
-        log_dir = os.path.join(cwd, ".claude", "logs")
-        os.makedirs(log_dir, exist_ok=True)
+        # Log directory
+        log_dir = get_log_dir(cwd)
 
         debug_log(log_dir, f"=== Stop hook started ===")
         debug_log(log_dir, f"transcript_path: {transcript_path}")
@@ -210,9 +300,15 @@ def log_response():
             print("No transcript path found", file=sys.stderr)
             sys.exit(0)
 
-        # Log file (per date + session)
-        date_prefix = datetime.now().strftime('%Y-%m-%d')
-        log_file = os.path.join(log_dir, f"{date_prefix}_{session_id}_conversation-log.txt")
+        # Read temp session to get format and log file path
+        temp_data = read_temp_session(log_dir, session_id)
+        if temp_data and temp_data.get("log_file_path"):
+            log_format = temp_data.get("log_format", "text")
+            log_file = temp_data.get("log_file_path")
+        else:
+            # Fallback: determine from config
+            log_format = get_log_format(cwd)
+            log_file = get_log_file_path(log_dir, session_id, log_format)
 
         # Extract all outputs from the last turn in the transcript
         follow_ups = []   # [(label, text), ...]
@@ -242,34 +338,28 @@ def log_response():
                             all_outputs = []
 
                         elif classification == "USER_ANSWER":
-                            # Follow-up interaction -> collect, reset assistant outputs only
                             text = extract_user_interaction(entry, classification)
                             follow_ups.append(("answer", text))
                             all_outputs = []
 
                         elif classification == "PLAN_APPROVAL":
-                            # Plan approval -> record, reset assistant outputs
                             text = extract_user_interaction(entry, classification)
                             follow_ups.append(("plan approved", text))
                             all_outputs = []
 
                         elif classification == "TOOL_REJECTION":
-                            # Tool rejection -> record inline (preserve preceding output)
                             text = extract_user_interaction(entry, classification)
                             if text:
-                                all_outputs.append(("tool_rejection", f"  ⎿  Tool use rejected with user message: {text}"))
+                                all_outputs.append(("tool_rejection", f"  \u23bf  Tool use rejected with user message: {text}"))
                             else:
-                                all_outputs.append(("tool_rejection", "  ⎿  Tool use rejected"))
+                                all_outputs.append(("tool_rejection", "  \u23bf  Tool use rejected"))
 
                         elif classification == "INTERRUPT":
-                            # Interrupt -> record inline
-                            all_outputs.append(("interrupt", "  ⎿  Interrupted"))
+                            all_outputs.append(("interrupt", "  \u23bf  Interrupted"))
 
                         elif classification == "TOOL_RESULT":
-                            # Regular tool_result -> reset assistant outputs only (keep follow_ups)
                             all_outputs = []
 
-                        # UNKNOWN -> ignore
                         continue
 
                     # Collect assistant/other entries (after first user entry)
@@ -288,36 +378,32 @@ def log_response():
 
         # Format output and write to log
         with open(log_file, 'a', encoding='utf-8') as f:
-            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            timestamp = datetime.now().strftime('%H:%M:%S')
 
-            # Record follow-up interactions
-            for label, text in follow_ups:
-                if text:
-                    f.write(f"👤 USER ({label}):\n{text}\n")
-                else:
-                    f.write(f"👤 USER ({label})\n")
-                f.write(f"{'-'*80}\n")
+            if log_format == "markdown":
+                _write_followups_markdown(f, follow_ups)
 
-            # Record response
-            formatted_output = [content for _, content in all_outputs]
-            response_text = "\n\n".join(formatted_output) if formatted_output else "[No output found]"
-            f.write(f"🤖 CLAUDE [{timestamp}]:\n")
-            f.write(f"{response_text}\n")
-            f.write(f"{'='*80}\n\n")
+                formatted_parts = _format_output_markdown(all_outputs)
+                response_text = "\n\n".join(formatted_parts) if formatted_parts else "[No output found]"
+                f.write(f"\n## \U0001f916 Claude \u2014 {timestamp}\n\n")
+                f.write(f"{response_text}\n")
+            else:
+                full_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                _write_followups_text(f, follow_ups)
+
+                formatted_parts = _format_output_text(all_outputs)
+                response_text = "\n\n".join(formatted_parts) if formatted_parts else "[No output found]"
+                f.write(f"\U0001f916 CLAUDE [{full_timestamp}]:\n")
+                f.write(f"{response_text}\n")
+                f.write(f"{'='*80}\n\n")
 
         # Clean up temporary session file
         temp_file = os.path.join(log_dir, f".temp_session_{session_id}.json")
         if os.path.exists(temp_file):
             os.remove(temp_file)
 
-        # Clean up stale temporary files (older than 1 hour)
-        temp_pattern = os.path.join(log_dir, ".temp_session_*.json")
-        for temp_f in glob.glob(temp_pattern):
-            try:
-                if os.path.getmtime(temp_f) < (datetime.now().timestamp() - 3600):
-                    os.remove(temp_f)
-            except:
-                pass
+        # Clean up stale temporary files
+        cleanup_stale_temp_files(log_dir)
 
         print("Response logged")
 
@@ -327,6 +413,7 @@ def log_response():
     except Exception as e:
         print(f"Error logging response: {e}", file=sys.stderr)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     log_response()

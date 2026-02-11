@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.2.0] - 2026-02-12
+
+### Added
+- Setup command (`/conversation-logger:setup`) for interactive configuration
+  - Supports global and project scope settings
+- Configurable log format: plain text (default) or Markdown
+  - Markdown: structured headings, code blocks, horizontal rules, icon-based interaction labels
+- Dual config path system: `~/.claude/conversation-logger-config.json` (global), `{project}/.claude/conversation-logger-config.json` (project)
+- Environment variable override (`CONVERSATION_LOG_FORMAT`)
+- Dynamic backtick fencing in Markdown to prevent code block collision
+- Shared utility module (`scripts/utils.py`) for common logic
+- Comprehensive TDD test suite (79 tests across 6 modules)
+  - Tier 1: E2E integration tests for critical path scenarios
+  - Tier 2: Safety net tests for discovered edge cases
+  - Tier 3: Regression guard tests for all core functions
+
+### Changed
+- **Breaking**: Tool results are no longer truncated at 10 lines (both text and markdown formats)
+- **Breaking**: Tool input parameters are no longer truncated at 60 characters (both text and markdown formats)
+- Refactored common logic (config loading, path generation, temp session, encoding, debug logging) into shared module
+
+### Fixed
+- Restore emoji prefixes in text format output that were unintentionally removed during v0.2.0 refactoring
+  - scripts/log-prompt.py: Restore `👤 USER:` prefix in prompt header
+  - scripts/log-response.py: Restore `👤 USER` prefix in follow-up interaction headers
+  - scripts/log-response.py: Restore `🤖 CLAUDE` prefix in response header
+  - Impact: Maintains visual consistency with v0.1.x text format output
+- Fix incorrect parsing of tool rejection reason when user message contains "user message:" substring
+  - scripts/log-response.py: Use `split("user message:", 1)` instead of `split("user message:")` to prevent over-splitting
+  - Impact: Tool rejection reasons containing "user message:" are now fully preserved
+
 ## [0.1.3] - 2026-02-11
 
 ### Fixed
