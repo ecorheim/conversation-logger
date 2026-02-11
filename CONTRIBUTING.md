@@ -71,7 +71,7 @@ Update `CHANGELOG.md` under the `[Unreleased]` section before committing. Follow
 When reporting bugs, please include:
 
 - Claude Code version (`claude --version`)
-- Python version (`python3 --version`)
+- Python version (`python --version`)
 - Operating system
 - Steps to reproduce
 - Expected vs actual behavior

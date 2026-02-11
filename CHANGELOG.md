@@ -1,20 +1,16 @@
 # Changelog
 
-## [0.1.2] - 2026-02-11
+## [0.1.3] - 2026-02-11
 
 ### Fixed
-- Fix Windows Unicode encoding error causing hook failure
-  - scripts/log-prompt.py, scripts/log-response.py: Add UTF-8 stdout/stderr wrapper for Windows
+- Fix Windows compatibility issues causing hook failures
+  - hooks/hooks.json: Replace 'python3' command with 'python' for cross-platform support
+  - scripts/log-prompt.py, scripts/log-response.py: Update shebang from python3 to python
+  - scripts/log-prompt.py, scripts/log-response.py: Add UTF-8 wrapper for stdin, stdout, and stderr on Windows
   - scripts/log-prompt.py, scripts/log-response.py: Remove Unicode characters from print statements
+  - CONTRIBUTING.md: Update python3 reference to python
+  - README.md: Add note about python PATH requirement for Windows users
   - Impact: Resolves "Failed with non-blocking status code: Python" error on Windows
-
-## [0.1.1] - 2026-02-11
-
-### Fixed
-- Replace python3 with python for Windows compatibility
-  - hooks/hooks.json: Update command entries to use 'python' instead of 'python3'
-  - scripts/log-prompt.py, scripts/log-response.py: Update shebang lines
-  - Impact: Plugin now works on Windows where 'python3' command is not available
 
 ## [0.1.0] - 2026-02-11
 

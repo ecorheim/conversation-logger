@@ -13,6 +13,8 @@ import glob
 # Ensure stdout/stderr can handle Unicode on Windows
 if sys.platform == "win32":
     import io
+    if hasattr(sys.stdin, 'buffer'):
+        sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
     if hasattr(sys.stdout, 'buffer'):
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     if hasattr(sys.stderr, 'buffer'):
