@@ -8,6 +8,14 @@ import sys
 import os
 from datetime import datetime
 
+# Ensure stdout/stderr can handle Unicode on Windows
+if sys.platform == "win32":
+    import io
+    if hasattr(sys.stdout, 'buffer'):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    if hasattr(sys.stderr, 'buffer'):
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 def log_prompt():
     try:
         # Read JSON data from stdin
@@ -43,7 +51,7 @@ def log_prompt():
                 "prompt": prompt
             }, f)
 
-        print("✓ Prompt logged", file=sys.stderr)
+        print("Prompt logged", file=sys.stderr)
 
     except json.JSONDecodeError as e:
         print(f"Error: Invalid JSON input: {e}", file=sys.stderr)

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.2] - 2026-02-11
+
+### Fixed
+- Fix Windows Unicode encoding error causing hook failure
+  - scripts/log-prompt.py, scripts/log-response.py: Add UTF-8 stdout/stderr wrapper for Windows
+  - scripts/log-prompt.py, scripts/log-response.py: Remove Unicode characters from print statements
+  - Impact: Resolves "Failed with non-blocking status code: Python" error on Windows
+
 ## [0.1.1] - 2026-02-11
 
 ### Fixed

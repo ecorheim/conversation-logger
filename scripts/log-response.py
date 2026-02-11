@@ -10,6 +10,14 @@ import os
 from datetime import datetime
 import glob
 
+# Ensure stdout/stderr can handle Unicode on Windows
+if sys.platform == "win32":
+    import io
+    if hasattr(sys.stdout, 'buffer'):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    if hasattr(sys.stderr, 'buffer'):
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 DEBUG = False  # Debug mode
 
 def debug_log(log_dir, message):
@@ -309,7 +317,7 @@ def log_response():
             except:
                 pass
 
-        print(f"✓ Response logged")
+        print("Response logged")
 
     except json.JSONDecodeError as e:
         print(f"Error: Invalid JSON input: {e}", file=sys.stderr)
