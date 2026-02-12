@@ -1,6 +1,6 @@
 {
   "name": "conversation-logger",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Automatically logs Claude Code conversations. Records prompts and responses chronologically in a single file with tool usage tracking.",
   "author": {
     "name": "cruelds"

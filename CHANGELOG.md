@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.1] - 2026-02-12
 
 ### Fixed
 - Remove invalid `commands` field from plugin.json manifest
