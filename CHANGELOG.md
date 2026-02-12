@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.3] - 2026-02-13
+
+### Changed
+- Reorganize documentation structure for better accessibility
+  - Move detailed architecture content from README.md to docs/architecture.md
+  - README.md: Replace detailed diagrams with concise summary and link to architecture docs
+  - docs/architecture.md: Add comprehensive architecture documentation including hook execution flow, session state management, and error handling
+  - .claude/rules/merge-strategy.md: Add docs/architecture.md to main branch allowlist
+  - Impact: README is now more user-friendly while preserving detailed technical documentation for developers
+
 ## [0.2.2] - 2026-02-12
 
 ### Changed

@@ -17,91 +17,13 @@ A Claude Code plugin that automatically logs conversations. Records prompts and 
 
 ## How It Works
 
-This plugin uses two Claude Code hooks that work together:
-
-1. **UserPromptSubmit** hook triggers `log-prompt.py` to record the user's input immediately
-2. **Stop** hook triggers `log-response.py` to parse the session transcript and record Claude's response, including all tool usage
+This plugin uses two hooks that work together:
+1. **UserPromptSubmit** hook records user prompts immediately
+2. **Stop** hook parses transcripts and records Claude's responses with tool usage
 
 Both outputs are appended to a single chronological log file per session.
 
-### Architecture Overview
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Claude
-    participant Prompt as log-prompt.py
-    participant Temp as temp_session
-    participant Response as log-response.py
-    participant Log as conversation-log
-
-    User->>Claude: Submit prompt
-    Note over Claude,Prompt: UserPromptSubmit Hook (10s timeout)
-
-    Claude->>Prompt: Trigger hook with JSON
-    Prompt->>Prompt: Load config (utils.py)
-    Prompt->>Temp: Save cwd/format/path
-    Prompt->>Log: Append user prompt
-
-    Claude->>Claude: Process & respond
-    Note over Claude,Response: Stop Hook (30s timeout)
-
-    Claude->>Response: Trigger hook
-    Response->>Temp: Read session metadata
-    Response->>Response: Parse transcript (JSONL)
-    Response->>Response: Format output (text/md)
-    Response->>Log: Append Claude response
-
-    Note over Log: Single chronological file per session
-```
-
-### Data Flow
-
-```mermaid
-graph LR
-    subgraph "Input"
-        A[User Prompt<br/>stdin JSON]
-    end
-
-    subgraph "Prompt Hook"
-        B[log-prompt.py]
-        C[Config Loader<br/>utils.py]
-    end
-
-    subgraph "Session State"
-        D[temp_session file<br/>cwd/format/path]
-    end
-
-    subgraph "Response Hook"
-        E[log-response.py]
-        F[Transcript Parser<br/>JSONL]
-        G[Format Engine<br/>text/markdown]
-    end
-
-    subgraph "Output"
-        H[.claude/logs/<br/>YYYY-MM-DD_session_conversation-log]
-    end
-
-    A --> B
-    C --> B
-    B --> D
-    D --> E
-    E --> F
-    F --> G
-    G --> H
-```
-
-### Configuration Priority
-
-```mermaid
-graph TD
-    A[Environment Variable<br/>CONVERSATION_LOG_FORMAT] -->|Highest| Z{Final Config}
-    B[Project Config<br/>.claude/conversation-logger-config.json] -->|High| Z
-    C[User Config<br/>~/.claude/conversation-logger-config.json] -->|Medium| Z
-    D[Default<br/>text] -->|Lowest| Z
-
-    Z --> E[Log Format Applied]
-```
+For detailed architecture, data flow, and hook execution details, see [docs/architecture.md](docs/architecture.md).
 
 ## Installation
 
