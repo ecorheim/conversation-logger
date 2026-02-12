@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.2] - 2026-02-12
+
+### Fixed
+- Fix tool rejection not being detected due to Unicode apostrophe mismatch
+  - scripts/log-response.py: Change curly apostrophe (U+2019) to ASCII apostrophe (U+0027) in `classify_user_entry()` pattern matching
+  - tests/test_classify.py: Fix test fixtures to use ASCII apostrophe matching actual Claude Code output
+  - Impact: Tool rejections (e.g., "User declined to answer questions") are now correctly classified as TOOL_REJECTION, preserving assistant output in logs
+
 ## [0.2.1] - 2026-02-12
 
 ### Fixed
