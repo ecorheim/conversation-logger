@@ -2,7 +2,7 @@
 
 A Claude Code plugin that automatically logs conversations. Records prompts and responses chronologically in a single file, including tool usage tracking.
 
-![conversation-logger infographic](docs/infographic.png)
+![conversation-logger infographic](docs/conversation-logger.png)
 
 ## Features
 
@@ -89,10 +89,6 @@ graph LR
     E --> F
     F --> G
     G --> H
-
-    style A fill:#e1f5ff,stroke:#01579b
-    style H fill:#e8f5e9,stroke:#1b5e20
-    style D fill:#fff9c4,stroke:#f57f17
 ```
 
 ### Configuration Priority
@@ -105,12 +101,6 @@ graph TD
     D[Default<br/>text] -->|Lowest| Z
 
     Z --> E[Log Format Applied]
-
-    style A fill:#ffcdd2,stroke:#c62828
-    style B fill:#fff9c4,stroke:#f57f17
-    style C fill:#c8e6c9,stroke:#2e7d32
-    style D fill:#e0e0e0,stroke:#424242
-    style E fill:#bbdefb,stroke:#1565c0
 ```
 
 ## Installation
