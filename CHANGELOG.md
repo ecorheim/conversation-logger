@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.1] - 2026-02-12
+
+### Fixed
+- Remove invalid `commands` field from plugin.json manifest
+  - .claude-plugin/plugin.json: Remove `"commands": ["commands/setup.md"]` that caused schema validation failure
+  - Impact: Resolves "commands: Invalid input" error when other users install the plugin
+- Remove invalid `name` field from setup command frontmatter
+  - commands/setup.md: Remove `name: setup` that is not part of the command spec
+  - Impact: Ensures `/conversation-logger:setup` command is properly discovered
+
 ## [0.2.0] - 2026-02-12
 
 ### Added
