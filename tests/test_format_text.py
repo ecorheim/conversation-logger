@@ -19,8 +19,8 @@ class TestTextEmojiPresence(unittest.TestCase):
 
     def test_write_prompt_text_has_user_emoji(self):
         buf = io.StringIO()
-        log_prompt_mod._write_prompt_text(buf, "Hello", "sess-1", "12:00:00")
-        self.assertIn("\U0001f464 USER:", buf.getvalue())
+        log_prompt_mod._write_prompt_text(buf, "Hello", "12:00:00")
+        self.assertIn("\U0001f464 USER", buf.getvalue())
 
     def test_write_followups_text_has_user_emoji(self):
         buf = io.StringIO()
@@ -83,19 +83,26 @@ class TestWritePromptTextStructure(unittest.TestCase):
 
     def test_contains_separator_lines(self):
         buf = io.StringIO()
-        log_prompt_mod._write_prompt_text(buf, "Hi", "s1", "12:00:00")
+        log_prompt_mod._write_prompt_text(buf, "Hi", "12:00:00")
         output = buf.getvalue()
         self.assertIn("=" * 80, output)
         self.assertIn("-" * 80, output)
 
-    def test_contains_session_id(self):
+    def test_no_session_id_in_body(self):
+        """Session ID is already in the filename; it should not appear in log body."""
         buf = io.StringIO()
-        log_prompt_mod._write_prompt_text(buf, "Hi", "sess-xyz", "12:00:00")
-        self.assertIn("sess-xyz", buf.getvalue())
+        log_prompt_mod._write_prompt_text(buf, "Hi", "12:00:00")
+        self.assertNotIn("Session:", buf.getvalue())
+
+    def test_timestamp_in_user_line(self):
+        """Timestamp should be merged into the USER header line."""
+        buf = io.StringIO()
+        log_prompt_mod._write_prompt_text(buf, "Hi", "14:30:45")
+        self.assertIn("\U0001f464 USER (14:30:45):", buf.getvalue())
 
     def test_contains_prompt_content(self):
         buf = io.StringIO()
-        log_prompt_mod._write_prompt_text(buf, "What is Python?", "s1", "12:00:00")
+        log_prompt_mod._write_prompt_text(buf, "What is Python?", "12:00:00")
         self.assertIn("What is Python?", buf.getvalue())
 
 

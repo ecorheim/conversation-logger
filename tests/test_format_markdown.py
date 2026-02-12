@@ -2,12 +2,42 @@
 import io
 import os
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.dirname(__file__))
 from conftest import import_script
 
+log_prompt_mod = import_script("log_prompt", "log-prompt.py")
 log_response_mod = import_script("log_response", "log-response.py")
+
+
+# ---------------------------------------------------------------------------
+# Tier 2.3: Session ID must not appear in markdown log body
+# ---------------------------------------------------------------------------
+class TestMarkdownPromptNoSessionId(unittest.TestCase):
+    """Session ID is in the filename; it should not be duplicated in log body."""
+
+    def test_no_session_blockquote(self):
+        """The '> Session:' blockquote line must not appear."""
+        buf = io.StringIO()
+        with tempfile.NamedTemporaryFile(suffix=".md") as tmp:
+            log_prompt_mod._write_prompt_markdown(buf, tmp.name, "Hello", "11:39:19")
+        self.assertNotIn("Session:", buf.getvalue())
+        self.assertNotIn("session", buf.getvalue().lower().replace("conversation", ""))
+
+    def test_user_heading_with_timestamp(self):
+        """User heading must still include timestamp."""
+        buf = io.StringIO()
+        with tempfile.NamedTemporaryFile(suffix=".md") as tmp:
+            log_prompt_mod._write_prompt_markdown(buf, tmp.name, "Hello", "11:39:19")
+        self.assertIn("## \U0001f464 User \u2014 11:39:19", buf.getvalue())
+
+    def test_prompt_content_present(self):
+        buf = io.StringIO()
+        with tempfile.NamedTemporaryFile(suffix=".md") as tmp:
+            log_prompt_mod._write_prompt_markdown(buf, tmp.name, "What is Python?", "12:00:00")
+        self.assertIn("What is Python?", buf.getvalue())
 
 
 # ---------------------------------------------------------------------------
