@@ -1,0 +1,179 @@
+<svg width="1200" height="1600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="1600" fill="#0F172A"/>
+
+  <!-- Decorative elements -->
+  <defs>
+    <linearGradient id="neonGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="neonPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#a78bfa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Header Section -->
+  <g id="header">
+    <!-- REC indicator -->
+    <circle cx="100" cy="80" r="8" fill="#ef4444" filter="url(#glow)">
+      <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <text x="120" y="87" font-family="JetBrains Mono, monospace" font-size="18" fill="#ef4444" font-weight="600">REC</text>
+
+    <!-- Main headline -->
+    <text x="600" y="120" font-family="Inter, sans-serif" font-size="56" fill="#ffffff" font-weight="800" text-anchor="middle">
+      Never Lose Context Again
+    </text>
+
+    <!-- Subtitle -->
+    <text x="600" y="170" font-family="JetBrains Mono, monospace" font-size="24" fill="#94a3b8" text-anchor="middle">
+      conversation-logger for Claude Code
+    </text>
+
+    <!-- Tagline -->
+    <text x="600" y="210" font-family="Inter, sans-serif" font-size="18" fill="#64748b" text-anchor="middle" font-style="italic">
+      The Black Box Recorder for AI Conversations
+    </text>
+  </g>
+
+  <!-- Main Flow Diagram Section -->
+  <g id="flow-diagram" transform="translate(200, 280)">
+    <!-- Step 1: User Input -->
+    <g id="step1">
+      <rect x="0" y="0" width="800" height="100" rx="10" fill="#1e293b" stroke="url(#neonPurple)" stroke-width="2"/>
+      <text x="40" y="35" font-family="Inter, sans-serif" font-size="20" fill="#ffffff" font-weight="600">👤 User Input</text>
+      <text x="40" y="65" font-family="JetBrains Mono, monospace" font-size="14" fill="#94a3b8">User submits prompt to Claude Code</text>
+    </g>
+
+    <!-- Hook indicator -->
+    <line x1="400" y1="100" x2="400" y2="140" stroke="url(#neonPurple)" stroke-width="3" marker-end="url(#arrowPurple)"/>
+    <rect x="280" y="105" width="240" height="30" rx="15" fill="#7c3aed" opacity="0.9"/>
+    <text x="400" y="125" font-family="JetBrains Mono, monospace" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="600">🪝 UserPromptSubmit Hook</text>
+
+    <!-- Step 2: Claude Processing -->
+    <g id="step2" transform="translate(0, 140)">
+      <rect x="0" y="0" width="800" height="160" rx="10" fill="#1e293b" stroke="url(#neonGreen)" stroke-width="2"/>
+      <text x="40" y="35" font-family="Inter, sans-serif" font-size="20" fill="#ffffff" font-weight="600">🤖 Claude's Agentic Loop</text>
+      <text x="40" y="65" font-family="JetBrains Mono, monospace" font-size="14" fill="#94a3b8">Thinking, planning, and executing...</text>
+
+      <!-- Tool icons -->
+      <g transform="translate(40, 80)">
+        <rect x="0" y="0" width="100" height="50" rx="5" fill="#334155" stroke="#10b981" stroke-width="1"/>
+        <text x="50" y="30" font-family="JetBrains Mono, monospace" font-size="12" fill="#10b981" text-anchor="middle" font-weight="600">Bash</text>
+
+        <rect x="120" y="0" width="100" height="50" rx="5" fill="#334155" stroke="#10b981" stroke-width="1"/>
+        <text x="170" y="30" font-family="JetBrains Mono, monospace" font-size="12" fill="#10b981" text-anchor="middle" font-weight="600">Edit</text>
+
+        <rect x="240" y="0" width="100" height="50" rx="5" fill="#334155" stroke="#10b981" stroke-width="1"/>
+        <text x="290" y="30" font-family="JetBrains Mono, monospace" font-size="12" fill="#10b981" text-anchor="middle" font-weight="600">Read</text>
+
+        <rect x="360" y="0" width="100" height="50" rx="5" fill="#334155" stroke="#10b981" stroke-width="1"/>
+        <text x="410" y="30" font-family="JetBrains Mono, monospace" font-size="12" fill="#10b981" text-anchor="middle" font-weight="600">Grep</text>
+
+        <text x="480" y="30" font-family="Inter, sans-serif" font-size="14" fill="#64748b">...</text>
+      </g>
+    </g>
+
+    <!-- Hook indicator 2 -->
+    <line x1="400" y1="300" x2="400" y2="340" stroke="url(#neonGreen)" stroke-width="3" marker-end="url(#arrowGreen)"/>
+    <rect x="310" y="305" width="180" height="30" rx="15" fill="#10b981" opacity="0.9"/>
+    <text x="400" y="325" font-family="JetBrains Mono, monospace" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="600">🪝 Stop Hook</text>
+
+    <!-- Step 3: Output -->
+    <g id="step3" transform="translate(0, 340)">
+      <rect x="0" y="0" width="800" height="120" rx="10" fill="#1e293b" stroke="url(#neonGreen)" stroke-width="2"/>
+      <text x="40" y="35" font-family="Inter, sans-serif" font-size="20" fill="#ffffff" font-weight="600">📁 Session Log Saved</text>
+      <text x="40" y="65" font-family="JetBrains Mono, monospace" font-size="14" fill="#10b981">YYYY-MM-DD_sessionid_conversation-log.md</text>
+      <text x="40" y="90" font-family="Inter, sans-serif" font-size="13" fill="#94a3b8">One clean file per session • Markdown or Text format</text>
+    </g>
+  </g>
+
+  <!-- Feature Grid Section -->
+  <g id="features" transform="translate(100, 900)">
+    <text x="500" y="0" font-family="Inter, sans-serif" font-size="28" fill="#ffffff" font-weight="700" text-anchor="middle">Key Features</text>
+
+    <!-- Feature 1 -->
+    <g transform="translate(0, 40)">
+      <rect x="0" y="0" width="240" height="200" rx="10" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+      <text x="120" y="50" font-family="sans-serif" font-size="48" text-anchor="middle">🪝</text>
+      <text x="120" y="90" font-family="Inter, sans-serif" font-size="18" fill="#ffffff" font-weight="600" text-anchor="middle">Automated Hooks</text>
+      <text x="120" y="130" font-family="Inter, sans-serif" font-size="13" fill="#94a3b8" text-anchor="middle">UserPromptSubmit &amp;</text>
+      <text x="120" y="150" font-family="Inter, sans-serif" font-size="13" fill="#94a3b8" text-anchor="middle">Stop hooks work</text>
+      <text x="120" y="170" font-family="Inter, sans-serif" font-size="13" fill="#94a3b8" text-anchor="middle">automatically</text>
+    </g>
+
+    <!-- Feature 2 -->
+    <g transform="translate(260, 40)">
+      <rect x="0" y="0" width="240" height="200" rx="10" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+      <text x="120" y="50" font-family="sans-serif" font-size="48" text-anchor="middle">📄</text>
+      <text x="120" y="90" font-family="Inter, sans-serif" font-size="18" fill="#ffffff" font-weight="600" text-anchor="middle">Session-based</text>
+      <text x="120" y="130" font-family="Inter, sans-serif" font-size="13" fill="#94a3b8" text-anchor="middle">One file per session</text>
+      <text x="120" y="150" font-family="Inter, sans-serif" font-size="13" fill="#94a3b8" text-anchor="middle">Chronological order</text>
+      <text x="120" y="170" font-family="Inter, sans-serif" font-size="13" fill="#94a3b8" text-anchor="middle">No fragmentation</text>
+    </g>
+
+    <!-- Feature 3 -->
+    <g transform="translate(520, 40)">
+      <rect x="0" y="0" width="240" height="200" rx="10" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+      <text x="120" y="50" font-family="sans-serif" font-size="48" text-anchor="middle">📝</text>
+      <text x="120" y="90" font-family="Inter, sans-serif" font-size="18" fill="#ffffff" font-weight="600" text-anchor="middle">Format Options</text>
+      <text x="120" y="130" font-family="Inter, sans-serif" font-size="13" fill="#94a3b8" text-anchor="middle">Markdown for reading</text>
+      <text x="120" y="150" font-family="Inter, sans-serif" font-size="13" fill="#94a3b8" text-anchor="middle">Plain text for parsing</text>
+      <text x="120" y="170" font-family="Inter, sans-serif" font-size="13" fill="#94a3b8" text-anchor="middle">Your choice</text>
+    </g>
+
+    <!-- Feature 4 -->
+    <g transform="translate(780, 40)">
+      <rect x="0" y="0" width="240" height="200" rx="10" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+      <text x="120" y="50" font-family="sans-serif" font-size="48" text-anchor="middle">🔧</text>
+      <text x="120" y="90" font-family="Inter, sans-serif" font-size="18" fill="#ffffff" font-weight="600" text-anchor="middle">Tool Tracking</text>
+      <text x="120" y="130" font-family="Inter, sans-serif" font-size="13" fill="#94a3b8" text-anchor="middle">Full tool execution</text>
+      <text x="120" y="150" font-family="Inter, sans-serif" font-size="13" fill="#94a3b8" text-anchor="middle">Input &amp; output logs</text>
+      <text x="120" y="170" font-family="Inter, sans-serif" font-size="13" fill="#94a3b8" text-anchor="middle">Debug with ease</text>
+    </g>
+  </g>
+
+  <!-- Footer/CTA Section -->
+  <g id="footer" transform="translate(0, 1350)">
+    <!-- Terminal window -->
+    <rect x="200" y="0" width="800" height="180" rx="10" fill="#000000" stroke="#10b981" stroke-width="2"/>
+
+    <!-- Terminal header -->
+    <rect x="200" y="0" width="800" height="40" rx="10" fill="#1a1a1a"/>
+    <circle cx="220" cy="20" r="6" fill="#ef4444"/>
+    <circle cx="240" cy="20" r="6" fill="#eab308"/>
+    <circle cx="260" cy="20" r="6" fill="#10b981"/>
+    <text x="280" y="25" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b">~/projects/conversation-logger</text>
+
+    <!-- Installation commands -->
+    <text x="220" y="75" font-family="JetBrains Mono, monospace" font-size="14" fill="#10b981" font-weight="600">$ </text>
+    <text x="250" y="75" font-family="JetBrains Mono, monospace" font-size="14" fill="#ffffff">/plugin marketplace add ecorheim/conversation-logger</text>
+
+    <text x="220" y="110" font-family="JetBrains Mono, monospace" font-size="14" fill="#10b981" font-weight="600">$ </text>
+    <text x="250" y="110" font-family="JetBrains Mono, monospace" font-size="14" fill="#ffffff">/plugin install conversation-logger@ecorheim-plugins</text>
+
+    <!-- GitHub link -->
+    <text x="600" y="155" font-family="Inter, sans-serif" font-size="14" fill="#64748b" text-anchor="middle">
+      github.com/ecorheim/conversation-logger
+    </text>
+  </g>
+
+  <!-- Arrow markers -->
+  <defs>
+    <marker id="arrowPurple" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <polygon points="0,0 10,5 0,10" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <polygon points="0,0 10,5 0,10" fill="#10b981"/>
+    </marker>
+  </defs>
+</svg>
