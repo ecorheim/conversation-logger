@@ -1,4 +1,7 @@
-.claude/
+.claude/*
+!.claude/rules/
+!.claude/skills/
+!.claude/settings.json
 .omc/
 
 __pycache__/
