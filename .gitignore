@@ -3,6 +3,7 @@
 !.claude/skills/
 !.claude/settings.json
 .omc/
+.serena/
 
 __pycache__/
 *.pyc
