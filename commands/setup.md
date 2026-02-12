@@ -1,5 +1,4 @@
 ---
-name: setup
 description: Configure conversation-logger plugin settings (log format)
 ---
 

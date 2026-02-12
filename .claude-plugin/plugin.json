@@ -8,6 +8,5 @@
   "homepage": "https://github.com/cruelds/claude-conversation-logger",
   "repository": "https://github.com/cruelds/claude-conversation-logger",
   "license": "MIT",
-  "keywords": ["logging", "conversation", "hooks", "transcript", "debugging"],
-  "commands": ["commands/setup.md"]
+  "keywords": ["logging", "conversation", "hooks", "transcript", "debugging"]
 }
