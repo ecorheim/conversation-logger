@@ -1,3 +1,21 @@
+# Branch & Merge Strategy
+
+## Remote Push Strategy
+
+Two remotes are configured with different visibility:
+
+```
+origin   → git@ecorheim (public)     → main only
+private  → git.cruelds.synology.me   → main + dev
+```
+
+### Push Rules
+
+- **main**: Push to both `origin` and `private`
+- **dev**: Push to `private` only (NEVER push dev to origin)
+- After every merge or commit on main: `git push origin main && git push private main`
+- After every commit on dev: `git push private dev`
+
 # Merge Strategy: dev → main
 
 ## tests/ Directory Exclusion
@@ -59,7 +77,13 @@ git commit -m "<copy dev's last commit message including gitmoji, subject, and b
 VERSION=$(python -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])")
 git tag -a "v$VERSION" -m "v$VERSION"
 
-# 7. Switch back to dev
+# 7. Push main to both remotes
+git push origin main && git push private main
+
+# 8. Push the version tag to both remotes
+git push origin "v$VERSION" && git push private "v$VERSION"
+
+# 9. Switch back to dev
 #    tests/ files may need cleanup before checkout
 rm -rf tests/ 2>/dev/null; git checkout dev
 ```
@@ -72,7 +96,9 @@ rm -rf tests/ 2>/dev/null; git checkout dev
 4. `rm -rf tests/`: Clean up untracked test files on disk to prevent checkout conflicts
 5. Commit message copies dev's last commit verbatim (gitmoji + type + subject + body)
 6. Create annotated tag `v<version>` on the merge commit (e.g., `v0.2.2`)
-7. Clean up and return to dev branch
+7. Push main branch to origin (public) and private
+8. Push version tag to both remotes
+9. Clean up and return to dev branch
 
 ## Rationale
 
