@@ -147,7 +147,7 @@ def classify_user_entry(entry):
                 return "PLAN_APPROVAL"
             elif result_text.startswith("Exit plan mode?"):
                 return "PLAN_APPROVAL"
-            elif result_text.startswith("The user doesn\u2019t want to proceed"):
+            elif result_text.startswith("The user doesn't want to proceed"):
                 return "TOOL_REJECTION"
             else:
                 return "TOOL_RESULT"
