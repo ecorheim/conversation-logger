@@ -18,9 +18,31 @@ private  → git.cruelds.synology.me   → main + dev
 
 # Merge Strategy: dev → main
 
-## tests/ Directory Exclusion
+## Plugin Structure Allowlist
 
-The `tests/` directory exists only in the `dev` branch and must NOT be included in `main`.
+Only files matching the plugin structure below are included in `main`. Everything else stays in `dev` only.
+
+```
+.claude-plugin/          # Plugin metadata
+.gitignore               # Repository settings
+CHANGELOG.md             # Change history
+CLAUDE.md                # Project instructions
+CONTRIBUTING.md          # Contribution guide
+LICENSE                  # License
+README.md                # Project description
+commands/                # Slash commands
+docs/infographic.png     # README-referenced image
+hooks/                   # Hook registration
+scripts/log-prompt.py    # UserPromptSubmit hook script
+scripts/log-response.py  # Stop hook script
+scripts/utils.py         # Shared utilities
+```
+
+**Excluded dev-only files** (examples): `tests/`, `.claude/rules/`, `.claude/settings.json`, `.claude/skills/`, `docs/design/`, `docs/prd/`, `docs/infographic.svg`, `scripts/convert-svg.js`
+
+### Maintenance
+
+When adding a new file that should ship to `main`, add it to both this allowlist and the `ALLOWED` regex in the Merge Procedure below.
 
 ## Pre-merge Version Check
 
@@ -63,12 +85,12 @@ git checkout main
 # 2. Start merge without committing
 git merge --no-ff --no-commit dev
 
-# 3. Handle conflicts (if tests/ causes modify/delete conflict)
-#    This is expected when test files were modified in dev
-git rm -r --cached tests/
+# 3. Remove non-allowlisted files from staging area
+ALLOWED='^(\.claude-plugin/|\.gitignore$|CHANGELOG\.md$|CLAUDE\.md$|CONTRIBUTING\.md$|LICENSE$|README\.md$|commands/|docs/infographic\.png$|hooks/|scripts/log-prompt\.py$|scripts/log-response\.py$|scripts/utils\.py$)'
+git diff --cached --name-only | grep -vE "$ALLOWED" | xargs -r git rm --cached
 
-# 4. Remove any untracked test files left on disk
-rm -rf tests/
+# 4. Remove non-allowlisted files left on disk
+find . -maxdepth 3 -not -path './.git/*' -type f | sed 's|^\./||' | grep -vE "$ALLOWED" | xargs -r rm -f
 
 # 5. Commit using the SAME message as dev's last commit
 git commit -m "<copy dev's last commit message including gitmoji, subject, and body>"
@@ -84,16 +106,15 @@ git push origin main && git push private main
 git push origin "v$VERSION" && git push private "v$VERSION"
 
 # 9. Switch back to dev
-#    tests/ files may need cleanup before checkout
-rm -rf tests/ 2>/dev/null; git checkout dev
+git checkout dev
 ```
 
 ### Step Explanation
 
 1. `--no-ff`: Force merge commit (prevent fast-forward)
 2. `--no-commit`: Stop before committing to allow modifications
-3. `git rm -r --cached tests/`: Remove tests/ from staging area only
-4. `rm -rf tests/`: Clean up untracked test files on disk to prevent checkout conflicts
+3. Unstage non-allowlisted files using the `ALLOWED` regex pattern (plugin structure only)
+4. Delete non-allowlisted files from disk to prevent checkout conflicts
 5. Commit message copies dev's last commit verbatim (gitmoji + type + subject + body)
 6. Create annotated tag `v<version>` on the merge commit (e.g., `v0.2.2`)
 7. Push main branch to origin (public) and private
@@ -102,6 +123,7 @@ rm -rf tests/ 2>/dev/null; git checkout dev
 
 ## Rationale
 
-- `main` is the release branch; test files are development-only artifacts
-- `dev` retains full test coverage for development workflow
+- `main` is the release branch containing only plugin-distributable files
+- `dev` retains full development environment (tests, rules, design docs, build scripts)
+- Allowlist approach ensures new dev-only files are excluded by default without manual updates
 - Consistent commit messages between branches maintain clear git history on GitHub
