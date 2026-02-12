@@ -2,6 +2,8 @@
 
 A Claude Code plugin that automatically logs conversations. Records prompts and responses chronologically in a single file, including tool usage tracking.
 
+![conversation-logger infographic](docs/infographic.png)
+
 ## Features
 
 - Prompts and responses recorded sequentially in a single file
@@ -21,6 +23,95 @@ This plugin uses two Claude Code hooks that work together:
 2. **Stop** hook triggers `log-response.py` to parse the session transcript and record Claude's response, including all tool usage
 
 Both outputs are appended to a single chronological log file per session.
+
+### Architecture Overview
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Claude
+    participant Prompt as log-prompt.py
+    participant Temp as temp_session
+    participant Response as log-response.py
+    participant Log as conversation-log
+
+    User->>Claude: Submit prompt
+    Note over Claude,Prompt: UserPromptSubmit Hook (10s timeout)
+
+    Claude->>Prompt: Trigger hook with JSON
+    Prompt->>Prompt: Load config (utils.py)
+    Prompt->>Temp: Save cwd/format/path
+    Prompt->>Log: Append user prompt
+
+    Claude->>Claude: Process & respond
+    Note over Claude,Response: Stop Hook (30s timeout)
+
+    Claude->>Response: Trigger hook
+    Response->>Temp: Read session metadata
+    Response->>Response: Parse transcript (JSONL)
+    Response->>Response: Format output (text/md)
+    Response->>Log: Append Claude response
+
+    Note over Log: Single chronological file per session
+```
+
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph "Input"
+        A[User Prompt<br/>stdin JSON]
+    end
+
+    subgraph "Prompt Hook"
+        B[log-prompt.py]
+        C[Config Loader<br/>utils.py]
+    end
+
+    subgraph "Session State"
+        D[temp_session file<br/>cwd/format/path]
+    end
+
+    subgraph "Response Hook"
+        E[log-response.py]
+        F[Transcript Parser<br/>JSONL]
+        G[Format Engine<br/>text/markdown]
+    end
+
+    subgraph "Output"
+        H[.claude/logs/<br/>YYYY-MM-DD_session_conversation-log]
+    end
+
+    A --> B
+    C --> B
+    B --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+
+    style A fill:#e1f5ff,stroke:#01579b
+    style H fill:#e8f5e9,stroke:#1b5e20
+    style D fill:#fff9c4,stroke:#f57f17
+```
+
+### Configuration Priority
+
+```mermaid
+graph TD
+    A[Environment Variable<br/>CONVERSATION_LOG_FORMAT] -->|Highest| Z{Final Config}
+    B[Project Config<br/>.claude/conversation-logger-config.json] -->|High| Z
+    C[User Config<br/>~/.claude/conversation-logger-config.json] -->|Medium| Z
+    D[Default<br/>text] -->|Lowest| Z
+
+    Z --> E[Log Format Applied]
+
+    style A fill:#ffcdd2,stroke:#c62828
+    style B fill:#fff9c4,stroke:#f57f17
+    style C fill:#c8e6c9,stroke:#2e7d32
+    style D fill:#e0e0e0,stroke:#424242
+    style E fill:#bbdefb,stroke:#1565c0
+```
 
 ## Installation
 

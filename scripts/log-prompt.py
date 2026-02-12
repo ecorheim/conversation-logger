@@ -39,9 +39,9 @@ def log_prompt():
 
         with open(log_file, 'a', encoding='utf-8') as f:
             if log_format == "markdown":
-                _write_prompt_markdown(f, log_file, prompt, session_id, timestamp)
+                _write_prompt_markdown(f, log_file, prompt, timestamp)
             else:
-                _write_prompt_text(f, prompt, session_id, timestamp)
+                _write_prompt_text(f, prompt, timestamp)
 
         # Save temporary session info (used by response hook)
         write_temp_session(log_dir, session_id, {
@@ -63,17 +63,14 @@ def log_prompt():
         sys.exit(1)
 
 
-def _write_prompt_text(f, prompt, session_id, timestamp):
+def _write_prompt_text(f, prompt, timestamp):
     """Write prompt in text format."""
-    full_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     f.write(f"\n{'='*80}\n")
-    f.write(f"[{full_timestamp}] Session: {session_id}\n")
-    f.write(f"{'='*80}\n")
-    f.write(f"\U0001f464 USER:\n{prompt}\n")
+    f.write(f"\U0001f464 USER ({timestamp}):\n{prompt}\n")
     f.write(f"{'-'*80}\n")
 
 
-def _write_prompt_markdown(f, log_file, prompt, session_id, timestamp):
+def _write_prompt_markdown(f, log_file, prompt, timestamp):
     """Write prompt in markdown format."""
     # Write document header if file is new/empty
     file_size = 0
@@ -87,8 +84,7 @@ def _write_prompt_markdown(f, log_file, prompt, session_id, timestamp):
         f.write(f"# Conversation Log \u2014 {date_str}\n")
 
     f.write(f"\n---\n\n")
-    f.write(f"## \U0001f464 User \u2014 {timestamp}\n")
-    f.write(f"> Session: `{session_id}`\n\n")
+    f.write(f"## \U0001f464 User \u2014 {timestamp}\n\n")
     f.write(f"{prompt}\n")
 
 
