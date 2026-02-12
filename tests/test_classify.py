@@ -41,7 +41,7 @@ class TestClassifyUserEntry(unittest.TestCase):
     def test_tool_rejection(self):
         entry = {"type": "user", "message": {"role": "user", "content": [
             {"type": "tool_result",
-             "content": "The user doesn\u2019t want to proceed with the tool call."}
+             "content": "The user doesn't want to proceed with the tool call."}
         ]}}
         self.assertEqual(log_response_mod.classify_user_entry(entry), "TOOL_REJECTION")
 
@@ -136,7 +136,7 @@ class TestExtractUserInteraction(unittest.TestCase):
     def test_tool_rejection_with_reason(self):
         entry = {"type": "user", "message": {"role": "user", "content": [
             {"type": "tool_result",
-             "content": "The user doesn\u2019t want to proceed. the user said: I don't want that."}
+             "content": "The user doesn't want to proceed. the user said: I don't want that."}
         ]}}
         result = log_response_mod.extract_user_interaction(entry, "TOOL_REJECTION")
         self.assertEqual(result, "I don't want that.")
