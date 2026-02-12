@@ -2,6 +2,13 @@
 
 ## [0.2.2] - 2026-02-12
 
+### Changed
+- Remove redundant session ID from log body content
+  - Session ID is already included in the log filename (`YYYY-MM-DD_{session_id}_conversation-log.{ext}`)
+  - Text format: merge timestamp into USER header line (`👤 USER (HH:MM:SS):`)
+  - Markdown format: remove `> Session:` blockquote line below user heading
+  - Impact: Cleaner log output without duplicated session information
+
 ### Fixed
 - Fix tool rejection not being detected due to Unicode apostrophe mismatch
   - scripts/log-response.py: Change curly apostrophe (U+2019) to ASCII apostrophe (U+0027) in `classify_user_entry()` pattern matching
