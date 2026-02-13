@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.4] - 2026-02-13
+
+### Fixed
+- Correct GitHub repository URLs in plugin metadata
+  - .claude-plugin/plugin.json: Update homepage and repository fields to match actual GitHub organization
+  - Change from `https://github.com/cruelds/claude-conversation-logger` to `https://github.com/ecorheim/conversation-logger`
+  - Impact: Plugin marketplace links now point to the correct repository location
+
 ## [0.2.3] - 2026-02-13
 
 ### Changed
