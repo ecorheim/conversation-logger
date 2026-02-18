@@ -198,5 +198,69 @@ class TestDebugLog(unittest.TestCase):
             self.assertRegex(content, r'\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]')
 
 
+# ---------------------------------------------------------------------------
+# resolve_log_path
+# ---------------------------------------------------------------------------
+class TestResolveLogPath(unittest.TestCase):
+
+    def test_returns_temp_session_path_when_present(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_dir = utils.get_log_dir(tmpdir)
+            expected_path = os.path.join(tmpdir, "custom-log.txt")
+            utils.write_temp_session(log_dir, "sid-1", {
+                "log_file_path": expected_path,
+                "log_format": "markdown"
+            })
+            log_file, log_format, returned_log_dir = utils.resolve_log_path(tmpdir, "sid-1")
+            self.assertEqual(log_file, expected_path)
+            self.assertEqual(log_format, "markdown")
+            self.assertEqual(returned_log_dir, log_dir)
+
+    def test_falls_back_to_config_when_no_temp_session(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir, "CONVERSATION_LOG_FORMAT": ""}):
+                log_file, log_format, log_dir = utils.resolve_log_path(tmpdir, "sid-2")
+                self.assertEqual(log_format, "text")
+                self.assertTrue(log_file.endswith(".txt"))
+                self.assertIn("sid-2", log_file)
+
+    def test_temp_session_without_log_file_path_falls_back(self):
+        """temp_session missing log_file_path key must fall back to config chain."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_dir = utils.get_log_dir(tmpdir)
+            utils.write_temp_session(log_dir, "sid-3", {"log_format": "markdown"})
+            with patch.dict(os.environ, {"HOME": tmpdir, "CONVERSATION_LOG_FORMAT": ""}):
+                log_file, log_format, _ = utils.resolve_log_path(tmpdir, "sid-3")
+                self.assertEqual(log_format, "text")
+                self.assertTrue(log_file.endswith(".txt"))
+
+
+# ---------------------------------------------------------------------------
+# ensure_markdown_header
+# ---------------------------------------------------------------------------
+class TestEnsureMarkdownHeader(unittest.TestCase):
+
+    def test_writes_header_to_empty_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_file = os.path.join(tmpdir, "test.md")
+            with open(log_file, 'a', encoding='utf-8') as f:
+                utils.ensure_markdown_header(f, log_file)
+            with open(log_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.assertIn("# Conversation Log", content)
+
+    def test_does_not_write_header_when_file_has_content(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_file = os.path.join(tmpdir, "test.md")
+            with open(log_file, 'w', encoding='utf-8') as f:
+                f.write("# Existing content\n")
+            with open(log_file, 'a', encoding='utf-8') as f:
+                utils.ensure_markdown_header(f, log_file)
+            with open(log_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.assertEqual(content.count("# "), 1)
+            self.assertNotIn("# Conversation Log", content)
+
+
 if __name__ == '__main__':
     unittest.main()
