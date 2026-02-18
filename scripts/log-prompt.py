@@ -10,7 +10,7 @@ from datetime import datetime
 
 # Add scripts directory to path for utils import
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from utils import setup_encoding, get_log_dir, get_log_file_path, get_log_format, write_temp_session
+from utils import setup_encoding, get_log_dir, get_log_file_path, get_log_format, write_temp_session, ensure_markdown_header
 
 # Ensure stdout/stderr can handle Unicode on Windows
 setup_encoding()
@@ -72,17 +72,7 @@ def _write_prompt_text(f, prompt, timestamp):
 
 def _write_prompt_markdown(f, log_file, prompt, timestamp):
     """Write prompt in markdown format."""
-    # Write document header if file is new/empty
-    file_size = 0
-    try:
-        file_size = os.path.getsize(log_file)
-    except OSError:
-        pass
-
-    if file_size == 0:
-        date_str = datetime.now().strftime('%Y-%m-%d')
-        f.write(f"# Conversation Log \u2014 {date_str}\n")
-
+    ensure_markdown_header(f, log_file)
     f.write(f"\n---\n\n")
     f.write(f"## \U0001f464 User \u2014 {timestamp}\n\n")
     f.write(f"{prompt}\n")
