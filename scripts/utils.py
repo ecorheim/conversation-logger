@@ -138,3 +138,25 @@ def calculate_fence(content):
         else:
             current = 0
     return '`' * max(max_consecutive + 1, 3)  # minimum 3
+
+
+def resolve_log_path(cwd, session_id):
+    """Resolve log file path: try temp_session first, fall back to config chain."""
+    log_dir = get_log_dir(cwd)
+    temp_data = read_temp_session(log_dir, session_id)
+    if temp_data and temp_data.get("log_file_path"):
+        return temp_data["log_file_path"], temp_data.get("log_format", "text"), log_dir
+    log_format = get_log_format(cwd)
+    log_file = get_log_file_path(log_dir, session_id, log_format)
+    return log_file, log_format, log_dir
+
+
+def ensure_markdown_header(f, log_file):
+    """Write markdown document header if file is new/empty. Receives open file handle."""
+    try:
+        if os.path.getsize(log_file) == 0:
+            date_str = datetime.now().strftime('%Y-%m-%d')
+            f.write(f"# Conversation Log \u2014 {date_str}\n")
+    except OSError:
+        date_str = datetime.now().strftime('%Y-%m-%d')
+        f.write(f"# Conversation Log \u2014 {date_str}\n")
