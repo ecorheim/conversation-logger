@@ -92,7 +92,7 @@ def ensure_config(cwd):
         "log_format": "text",
         "context_keeper": {
             "enabled": True,
-            "scope": "user"
+            "scope": "project"
         }
     }
 
