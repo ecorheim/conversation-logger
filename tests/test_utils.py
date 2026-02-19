@@ -199,6 +199,30 @@ class TestDebugLog(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# get_log_file_path
+# ---------------------------------------------------------------------------
+class TestGetLogFilePath(unittest.TestCase):
+
+    def test_filename_includes_time_component(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = utils.get_log_file_path(tmpdir, "abc123", "text")
+            filename = os.path.basename(path)
+            # Must match YYYY-MM-DD_HH-MM-SS_session_conversation-log.ext
+            import re
+            self.assertRegex(filename, r'^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_')
+
+    def test_txt_extension_for_text_format(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = utils.get_log_file_path(tmpdir, "abc123", "text")
+            self.assertTrue(path.endswith(".txt"))
+
+    def test_md_extension_for_markdown_format(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = utils.get_log_file_path(tmpdir, "abc123", "markdown")
+            self.assertTrue(path.endswith(".md"))
+
+
+# ---------------------------------------------------------------------------
 # resolve_log_path
 # ---------------------------------------------------------------------------
 class TestResolveLogPath(unittest.TestCase):
@@ -283,7 +307,7 @@ class TestEnsureConfig(unittest.TestCase):
                 config = json.load(f)
             self.assertEqual(config["log_format"], "text")
             self.assertTrue(config["context_keeper"]["enabled"])
-            self.assertEqual(config["context_keeper"]["scope"], "user")
+            self.assertEqual(config["context_keeper"]["scope"], "project")
 
     def test_skips_when_project_config_exists(self):
         with tempfile.TemporaryDirectory() as tmpdir:

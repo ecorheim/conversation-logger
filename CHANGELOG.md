@@ -3,7 +3,13 @@
 ## [Unreleased]
 
 ### Changed
+- Log filenames now include session creation time for easier ordering of same-day sessions
+  - New format: `YYYY-MM-DD_HH-MM-SS_{session_id}_conversation-log.{txt|md}`
 - Default memory scope in auto-generated config changed from `user` to `project`
+
+### Fixed
+- `MEMORY.md` is now auto-created on first context compaction when context-keeper is enabled but no memory file exists
+  - Previously, context-keeper silently skipped saving state if `MEMORY.md` had never been initialized, causing session memory to never be written
 
 ## [0.4.1] - 2026-02-19
 
