@@ -417,5 +417,190 @@ class TestUnknownEvent(unittest.TestCase):
                     self.assertEqual(e.code, 0)
 
 
+# ---------------------------------------------------------------------------
+# Context Keeper — SessionStart
+# ---------------------------------------------------------------------------
+def _run_event_capture_stdout(tmpdir, event_payload, log_format="text"):
+    """Like _run_event but also captures and returns stdout output."""
+    if log_format == "markdown":
+        claude_dir = os.path.join(tmpdir, ".claude")
+        os.makedirs(claude_dir, exist_ok=True)
+        with open(os.path.join(claude_dir, "conversation-logger-config.json"), 'w') as f:
+            json.dump({"log_format": "markdown"}, f)
+
+    mock_input = json.dumps(event_payload)
+    stdout_capture = io.StringIO()
+    with patch('sys.stdin', io.StringIO(mock_input)):
+        with patch('sys.stderr', io.StringIO()):
+            with patch('sys.stdout', stdout_capture):
+                log_event_mod.log_event()
+    return stdout_capture.getvalue()
+
+
+def _write_memory(path, content):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+
+class TestSessionStartContextKeeper(unittest.TestCase):
+
+    def test_returns_additional_context_when_active_work_present(self):
+        """SessionStart prints additionalContext JSON when Active Work exists in MEMORY.md."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir, "CONVERSATION_LOG_FORMAT": ""}):
+                session_id = "ck-ss-1"
+                # user scope: ~/.claude/projects/<sanitized>/memory/MEMORY.md
+                sanitized = tmpdir.lstrip('/').replace('/', '-')
+                memory_dir = os.path.join(tmpdir, ".claude", "projects", sanitized, "memory")
+                memory_file = os.path.join(memory_dir, "MEMORY.md")
+                _write_memory(memory_file, (
+                    "# Memory\n\n"
+                    "## Active Work\n"
+                    "- build auth module | 60% done | Next: add tests\n"
+                ))
+
+                stdout_out = _run_event_capture_stdout(tmpdir, {
+                    "hook_event_name": "SessionStart",
+                    "session_id": session_id,
+                    "cwd": tmpdir,
+                    "source": "startup"
+                })
+                self.assertTrue(stdout_out.strip(), "Expected JSON output on stdout")
+                data = json.loads(stdout_out.strip())
+                self.assertIn("hookSpecificOutput", data)
+                ctx = data["hookSpecificOutput"]["additionalContext"]
+                self.assertIn("[Context Keeper]", ctx)
+                self.assertIn("Active work detected", ctx)
+                self.assertIn("build auth module", ctx)
+
+    def test_no_stdout_when_context_keeper_disabled(self):
+        """SessionStart produces no stdout JSON when context_keeper.enabled is false."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir, "CONVERSATION_LOG_FORMAT": ""}):
+                session_id = "ck-ss-2"
+                # Write config with context_keeper disabled
+                claude_dir = os.path.join(tmpdir, ".claude")
+                os.makedirs(claude_dir, exist_ok=True)
+                with open(os.path.join(claude_dir, "conversation-logger-config.json"), 'w') as f:
+                    json.dump({"log_format": "text",
+                               "context_keeper": {"enabled": False}}, f)
+
+                # Create MEMORY.md so there is something to restore
+                sanitized = tmpdir.lstrip('/').replace('/', '-')
+                memory_dir = os.path.join(tmpdir, ".claude", "projects", sanitized, "memory")
+                memory_file = os.path.join(memory_dir, "MEMORY.md")
+                _write_memory(memory_file, "# Memory\n\n## Active Work\n- task\n")
+
+                stdout_out = _run_event_capture_stdout(tmpdir, {
+                    "hook_event_name": "SessionStart",
+                    "session_id": session_id,
+                    "cwd": tmpdir,
+                    "source": "startup"
+                })
+                self.assertEqual(stdout_out.strip(), "")
+
+    def test_no_stdout_when_no_memory_file(self):
+        """SessionStart produces no stdout when MEMORY.md does not exist."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir, "CONVERSATION_LOG_FORMAT": ""}):
+                session_id = "ck-ss-3"
+                stdout_out = _run_event_capture_stdout(tmpdir, {
+                    "hook_event_name": "SessionStart",
+                    "session_id": session_id,
+                    "cwd": tmpdir,
+                    "source": "reconnect"
+                })
+                self.assertEqual(stdout_out.strip(), "")
+
+    def test_logging_still_works_regardless_of_context_keeper(self):
+        """Log file is written even when context-keeper is active."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir, "CONVERSATION_LOG_FORMAT": ""}):
+                session_id = "ck-ss-4"
+                _run_event_capture_stdout(tmpdir, {
+                    "hook_event_name": "SessionStart",
+                    "session_id": session_id,
+                    "cwd": tmpdir,
+                    "source": "startup"
+                })
+                log_dir = os.path.join(tmpdir, ".claude", "logs")
+                log_file = utils.read_temp_session(log_dir, session_id)["log_file_path"]
+                content = _read_log(log_file)
+                self.assertIn("~ SESSION START", content)
+
+
+# ---------------------------------------------------------------------------
+# Context Keeper — PreCompact
+# ---------------------------------------------------------------------------
+class TestPreCompactContextKeeper(unittest.TestCase):
+
+    def test_updates_memory_on_pre_compact(self):
+        """PreCompact writes compaction marker to MEMORY.md when it exists."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir, "CONVERSATION_LOG_FORMAT": ""}):
+                session_id = "ck-pc-1"
+                log_file = _setup_session(tmpdir, session_id)
+
+                # Create MEMORY.md (user scope)
+                sanitized = tmpdir.lstrip('/').replace('/', '-')
+                memory_dir = os.path.join(tmpdir, ".claude", "projects", sanitized, "memory")
+                memory_file = os.path.join(memory_dir, "MEMORY.md")
+                _write_memory(memory_file, "# Memory\n\n## Active Work\n- refactoring\n")
+
+                _run_event(tmpdir, {
+                    "hook_event_name": "PreCompact",
+                    "session_id": session_id,
+                    "cwd": tmpdir,
+                    "trigger": "auto"
+                })
+
+                with open(memory_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                self.assertIn("<!-- compaction: auto at", content)
+
+    def test_skips_memory_update_when_no_memory_file(self):
+        """PreCompact does not crash when MEMORY.md does not exist."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir, "CONVERSATION_LOG_FORMAT": ""}):
+                session_id = "ck-pc-2"
+                log_file = _setup_session(tmpdir, session_id)
+                # No MEMORY.md created
+                _run_event(tmpdir, {
+                    "hook_event_name": "PreCompact",
+                    "session_id": session_id,
+                    "cwd": tmpdir,
+                    "trigger": "manual"
+                })
+                # Log was still written
+                content = _read_log(log_file)
+                self.assertIn("~ COMPACT", content)
+
+    def test_context_keeper_error_does_not_break_logging(self):
+        """A context-keeper failure must not prevent the log entry from being written."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir, "CONVERSATION_LOG_FORMAT": ""}):
+                session_id = "ck-pc-3"
+                log_file = _setup_session(tmpdir, session_id)
+
+                # Patch write_compaction_marker to raise
+                with patch.object(log_event_mod, 'write_compaction_marker',
+                                   side_effect=RuntimeError("simulated failure")):
+                    # Also create MEMORY.md so the code path is reached
+                    sanitized = tmpdir.lstrip('/').replace('/', '-')
+                    memory_dir = os.path.join(tmpdir, ".claude", "projects", sanitized, "memory")
+                    memory_file = os.path.join(memory_dir, "MEMORY.md")
+                    _write_memory(memory_file, "# Memory\n\n## Active Work\n- task\n")
+
+                    _run_event(tmpdir, {
+                        "hook_event_name": "PreCompact",
+                        "session_id": session_id,
+                        "cwd": tmpdir,
+                        "trigger": "auto"
+                    })
+                content = _read_log(log_file)
+                self.assertIn("~ COMPACT", content)
+
+
 if __name__ == '__main__':
     unittest.main()
