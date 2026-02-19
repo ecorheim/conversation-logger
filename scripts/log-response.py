@@ -391,11 +391,6 @@ def log_response():
                 f.write(f"{response_text}\n")
                 f.write(f"{'='*80}\n\n")
 
-        # Clean up temporary session file
-        temp_file = os.path.join(log_dir, f".temp_session_{session_id}.json")
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
-
         # Clean up stale temporary files
         cleanup_stale_temp_files(log_dir)
 
