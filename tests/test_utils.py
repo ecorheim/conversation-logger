@@ -262,5 +262,62 @@ class TestEnsureMarkdownHeader(unittest.TestCase):
             self.assertNotIn("# Conversation Log", content)
 
 
+# ---------------------------------------------------------------------------
+# ensure_config
+# ---------------------------------------------------------------------------
+class TestEnsureConfig(unittest.TestCase):
+
+    def test_creates_default_config_when_none_exists(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir}):
+                utils.ensure_config(tmpdir)
+            project_config = os.path.join(tmpdir, ".claude", "conversation-logger-config.json")
+            self.assertTrue(os.path.exists(project_config))
+
+    def test_default_values_correct(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir}):
+                utils.ensure_config(tmpdir)
+            project_config = os.path.join(tmpdir, ".claude", "conversation-logger-config.json")
+            with open(project_config, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            self.assertEqual(config["log_format"], "text")
+            self.assertTrue(config["context_keeper"]["enabled"])
+            self.assertEqual(config["context_keeper"]["scope"], "user")
+
+    def test_skips_when_project_config_exists(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            claude_dir = os.path.join(tmpdir, ".claude")
+            os.makedirs(claude_dir)
+            project_config = os.path.join(claude_dir, "conversation-logger-config.json")
+            with open(project_config, 'w', encoding='utf-8') as f:
+                json.dump({"log_format": "markdown"}, f)
+            with patch.dict(os.environ, {"HOME": tmpdir}):
+                utils.ensure_config(tmpdir)
+            with open(project_config, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            self.assertEqual(config["log_format"], "markdown")
+
+    def test_skips_when_user_config_exists(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            home_dir = os.path.join(tmpdir, "home")
+            project_dir = os.path.join(tmpdir, "project")
+            os.makedirs(project_dir)
+            user_claude = os.path.join(home_dir, ".claude")
+            os.makedirs(user_claude)
+            with open(os.path.join(user_claude, "conversation-logger-config.json"), 'w') as f:
+                json.dump({"log_format": "markdown"}, f)
+            with patch.dict(os.environ, {"HOME": home_dir}):
+                utils.ensure_config(project_dir)
+            project_config = os.path.join(project_dir, ".claude", "conversation-logger-config.json")
+            self.assertFalse(os.path.exists(project_config))
+
+    def test_creates_claude_dir_if_missing(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir}):
+                utils.ensure_config(tmpdir)
+            self.assertTrue(os.path.isdir(os.path.join(tmpdir, ".claude")))
+
+
 if __name__ == '__main__':
     unittest.main()

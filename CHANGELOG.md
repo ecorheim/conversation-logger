@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Auto-create `conversation-logger-config.json` with default values at session start if no config file exists in the project or user scope
+
 ## [0.4.0] - 2026-02-19
 
 ### Added
