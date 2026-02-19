@@ -1,0 +1,10 @@
+{
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
+    "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "0"
+  },
+  "enabledPlugins": {
+    "notebooklm": false,
+    "context7": false
+  }
+}

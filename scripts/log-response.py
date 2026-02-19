@@ -13,7 +13,8 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils import (
     setup_encoding, get_log_dir, get_log_file_path, get_log_format,
-    read_temp_session, cleanup_stale_temp_files, debug_log, calculate_fence
+    read_temp_session, cleanup_stale_temp_files, debug_log, calculate_fence,
+    resolve_log_path
 )
 
 # Ensure stdout/stderr can handle Unicode on Windows
@@ -301,14 +302,7 @@ def log_response():
             sys.exit(0)
 
         # Read temp session to get format and log file path
-        temp_data = read_temp_session(log_dir, session_id)
-        if temp_data and temp_data.get("log_file_path"):
-            log_format = temp_data.get("log_format", "text")
-            log_file = temp_data.get("log_file_path")
-        else:
-            # Fallback: determine from config
-            log_format = get_log_format(cwd)
-            log_file = get_log_file_path(log_dir, session_id, log_format)
+        log_file, log_format, _ = resolve_log_path(cwd, session_id)
 
         # Extract all outputs from the last turn in the transcript
         follow_ups = []   # [(label, text), ...]
