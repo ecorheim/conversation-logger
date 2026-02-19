@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils import (
     setup_encoding, get_log_dir, get_log_format, get_log_file_path,
     write_temp_session, read_temp_session, cleanup_stale_temp_files,
-    resolve_log_path, ensure_markdown_header,
+    resolve_log_path, ensure_markdown_header, ensure_config,
     get_context_keeper_config, get_memory_path,
     read_active_work, write_compaction_marker,
     extract_modified_files, build_restore_context
@@ -29,6 +29,7 @@ def _ts():
 
 
 def handle_session_start(input_data, log_file, log_format, log_dir, session_id, cwd):
+    ensure_config(cwd)
     source = input_data.get("source", "unknown")
     model = input_data.get("model", "")
     ts = _ts()

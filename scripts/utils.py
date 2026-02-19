@@ -80,6 +80,32 @@ def load_config(cwd):
     return {"log_format": "text"}
 
 
+def ensure_config(cwd):
+    """Create default config at project path if no config exists in the chain."""
+    project_config = os.path.join(cwd, ".claude", "conversation-logger-config.json")
+    user_config = os.path.join(os.path.expanduser("~"), ".claude", "conversation-logger-config.json")
+
+    if os.path.exists(project_config) or os.path.exists(user_config):
+        return
+
+    default = {
+        "log_format": "text",
+        "context_keeper": {
+            "enabled": True,
+            "scope": "user"
+        }
+    }
+
+    try:
+        config_dir = os.path.join(cwd, ".claude")
+        os.makedirs(config_dir, exist_ok=True)
+        with open(project_config, 'w', encoding='utf-8') as f:
+            json.dump(default, f, indent=2, ensure_ascii=False)
+            f.write('\n')
+    except (IOError, OSError) as e:
+        print(f"Warning: failed to create default config: {e}", file=sys.stderr)
+
+
 def get_log_format(cwd):
     """Get log format from config. Returns 'text' or 'markdown'."""
     return load_config(cwd).get("log_format", "text")
