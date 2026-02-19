@@ -5,8 +5,8 @@
 Two remotes are configured with different visibility:
 
 ```
-origin   → git@github-ecorheim (public GitHub)  → main only
-private  → 192.168.1.220:10023 (Synology NAS)   → main + dev
+origin   → git@github-ecorheim (public GitHub)                      → main only
+private  → 192.168.1.220:10023 / git.cruelds.synology.me (NAS)     → main + dev
 ```
 
 ### Push Rules
