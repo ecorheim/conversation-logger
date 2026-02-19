@@ -34,7 +34,7 @@ def get_log_dir(cwd):
 
 def get_log_file_path(log_dir, session_id, log_format):
     """Generate log file path with appropriate extension."""
-    date_prefix = datetime.now().strftime('%Y-%m-%d')
+    date_prefix = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     ext = ".md" if log_format == "markdown" else ".txt"
     return os.path.join(log_dir, f"{date_prefix}_{session_id}_conversation-log{ext}")
 
@@ -92,7 +92,7 @@ def ensure_config(cwd):
         "log_format": "text",
         "context_keeper": {
             "enabled": True,
-            "scope": "user"
+            "scope": "project"
         }
     }
 

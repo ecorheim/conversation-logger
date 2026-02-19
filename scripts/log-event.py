@@ -131,10 +131,13 @@ def handle_pre_compact(input_data, log_file, log_format, log_dir, session_id, cw
         ck_config = get_context_keeper_config(cwd)
         if ck_config["enabled"]:
             memory_file = get_memory_path(cwd, ck_config["scope"])
-            if os.path.isfile(memory_file):
-                transcript_path = input_data.get("transcript_path", "")
-                modified_files = extract_modified_files(transcript_path) if transcript_path else []
-                write_compaction_marker(memory_file, trigger, modified_files)
+            if not os.path.isfile(memory_file):
+                os.makedirs(os.path.dirname(memory_file), exist_ok=True)
+                with open(memory_file, 'w', encoding='utf-8') as mf:
+                    mf.write("# Memory\n\n## Active Work\n\n")
+            transcript_path = input_data.get("transcript_path", "")
+            modified_files = extract_modified_files(transcript_path) if transcript_path else []
+            write_compaction_marker(memory_file, trigger, modified_files)
     except Exception as e:
         print(f"Warning: context-keeper error in PreCompact: {e}", file=sys.stderr)
 

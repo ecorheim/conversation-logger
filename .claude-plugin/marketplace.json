@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Claude Code plugins by ecorheim",
-    "version": "0.4.1"
+    "version": "0.4.2"
   },
   "plugins": [
     {
       "name": "conversation-logger",
       "source": "./",
       "description": "Automatically logs Claude Code conversations and maintains session memory continuity. Records prompts and responses chronologically with tool usage tracking. Built-in context-keeper saves and restores work state across sessions.",
-      "version": "0.4.1",
+      "version": "0.4.2",
       "keywords": ["logging", "conversation", "hooks", "transcript", "debugging"],
       "category": "productivity"
     }
