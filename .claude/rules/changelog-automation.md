@@ -8,11 +8,30 @@
 
 ## Execution Timing
 
-**Key**: Changelog updates must happen **before Git commit**
+Two workflows depending on branch:
 
+**Development (dev branch):**
 ```
-1. Complete work → 2. Update CHANGELOG.md → 3. git add (work files + CHANGELOG.md) → 4. git commit
+1. Complete work → 2. Update CHANGELOG.md ([Unreleased]) → 3. git add → 4. git commit
 ```
+
+**Release (when merging dev → main):**
+```
+1. Determine version (semver)
+2. Convert CHANGELOG.md [Unreleased] → [x.y.z] - YYYY-MM-DD
+3. Update version files (see Version Files section)
+4. Follow merge-strategy.md merge procedure
+```
+
+## Version Files
+
+Release 시 아래 3개 파일의 버전을 동기화:
+
+| File | Field |
+|------|-------|
+| `CHANGELOG.md` | `## [x.y.z] - YYYY-MM-DD` header |
+| `.claude-plugin/plugin.json` | `version` |
+| `.claude-plugin/marketplace.json` | `metadata.version`, `plugins[0].version` |
 
 ## Classification Criteria
 
@@ -68,3 +87,4 @@ git commit -m "fix: resolve program unable to terminate gracefully"
 - [ ] Correct category classification
 - [ ] Clear and specific descriptions
 - [ ] CHANGELOG.md included in git add
+- [ ] Version files synced on release (plugin.json, marketplace.json)
