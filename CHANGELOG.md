@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.4.2] - 2026-02-19
 
 ### Changed
 - Log filenames now include session creation time for easier ordering of same-day sessions
