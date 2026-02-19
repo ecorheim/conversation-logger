@@ -6,7 +6,7 @@
           {
             "type": "command",
             "command": "python \"${CLAUDE_PLUGIN_ROOT}/scripts/log-event.py\"",
-            "timeout": 5
+            "timeout": 10
           }
         ]
       }
@@ -72,7 +72,7 @@
           {
             "type": "command",
             "command": "python \"${CLAUDE_PLUGIN_ROOT}/scripts/log-event.py\"",
-            "timeout": 5
+            "timeout": 10
           }
         ]
       }
