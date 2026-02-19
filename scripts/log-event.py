@@ -14,7 +14,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils import (
     setup_encoding, get_log_dir, get_log_format, get_log_file_path,
     write_temp_session, read_temp_session, cleanup_stale_temp_files,
-    resolve_log_path, ensure_markdown_header
+    resolve_log_path, ensure_markdown_header,
+    get_context_keeper_config, get_memory_path,
+    read_active_work, write_compaction_marker,
+    extract_modified_files, build_restore_context
 )
 
 # Ensure stdout/stderr can handle Unicode on Windows
@@ -48,6 +51,22 @@ def handle_session_start(input_data, log_file, log_format, log_dir, session_id, 
         else:
             model_part = f" | model={model}" if model else ""
             f.write(f"~ SESSION START ({ts}) | source={source}{model_part}\n")
+
+    # Context Keeper: restore context from MEMORY.md
+    try:
+        ck_config = get_context_keeper_config(cwd)
+        if ck_config["enabled"]:
+            memory_file = get_memory_path(cwd, ck_config["scope"])
+            context_msg = build_restore_context(memory_file, source)
+            if context_msg:
+                print(json.dumps({
+                    "hookSpecificOutput": {
+                        "hookEventName": "SessionStart",
+                        "additionalContext": context_msg
+                    }
+                }))
+    except Exception as e:
+        print(f"Warning: context-keeper error in SessionStart: {e}", file=sys.stderr)
 
 
 def handle_session_end(input_data, log_file, log_format, log_dir, session_id, cwd):
@@ -105,6 +124,18 @@ def handle_pre_compact(input_data, log_file, log_format, log_dir, session_id, cw
             f.write(f"> **Context Compacted** -- {ts} | trigger: `{trigger}`\n")
         else:
             f.write(f"~ COMPACT ({ts}) | trigger={trigger}\n")
+
+    # Context Keeper: save work state to MEMORY.md
+    try:
+        ck_config = get_context_keeper_config(cwd)
+        if ck_config["enabled"]:
+            memory_file = get_memory_path(cwd, ck_config["scope"])
+            if os.path.isfile(memory_file):
+                transcript_path = input_data.get("transcript_path", "")
+                modified_files = extract_modified_files(transcript_path) if transcript_path else []
+                write_compaction_marker(memory_file, trigger, modified_files)
+    except Exception as e:
+        print(f"Warning: context-keeper error in PreCompact: {e}", file=sys.stderr)
 
 
 def handle_tool_failure(input_data, log_file, log_format, log_dir, session_id, cwd):

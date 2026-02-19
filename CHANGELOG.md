@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.4.0] - 2026-02-19
+
+### Added
+- Context-keeper: automatic session memory continuity built into the plugin
+  - `SessionStart` hook reads `MEMORY.md` and injects Active Work context into Claude's session prompt via `additionalContext`
+  - `PreCompact` hook writes a compaction marker (trigger, timestamp, modified files) into the `## Active Work` section of `MEMORY.md` so the next session can recover in-progress work
+  - Three memory scopes: `user` (personal, `~/.claude/projects/<project>/memory/MEMORY.md`), `project` (shared, `<cwd>/.context-keeper/memory/MEMORY.md`), `local` (per-project personal, gitignored)
+  - Enabled by default (`enabled: true`, `scope: "user"`); configure via `context_keeper` key in the conversation-logger config file
+  - Extracts recently modified files from the session transcript (Edit/Write tool uses) and lists them in the compaction marker for handoff context
+- `/conversation-logger:context-keeper` skill for reviewing and managing MEMORY.md
+  - Reports memory status, identifies stale Active Work entries, verifies Topic File Index sync
+- Setup command (`/conversation-logger:setup`) now includes context-keeper configuration
+  - Enables/disables context-keeper and selects memory scope (user/project/local)
+
+### Changed
+- `SessionStart` and `PreCompact` hook timeouts increased from 5s to 10s to accommodate MEMORY.md I/O
+
 ## [0.3.0] - 2026-02-18
 
 ### Added

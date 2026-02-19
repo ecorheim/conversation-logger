@@ -38,6 +38,7 @@ scripts/log-event.py     # Session event hook script
 scripts/log-prompt.py    # UserPromptSubmit hook script
 scripts/log-response.py  # Stop hook script
 scripts/utils.py         # Shared utilities
+skills/                  # Skill definitions
 ```
 
 **Excluded dev-only files** (examples): `tests/`, `.claude/rules/`, `.claude/settings.json`, `.claude/skills/`, `docs/design/`, `docs/prd/`, `docs/infographic.svg`, `scripts/convert-svg.js`
@@ -88,7 +89,7 @@ git checkout main
 git merge --no-ff --no-commit dev
 
 # 3. Remove non-allowlisted files from staging area
-ALLOWED='^(\.claude-plugin/|\.gitignore$|CHANGELOG\.md$|CLAUDE\.md$|CONTRIBUTING\.md$|LICENSE$|README\.md$|commands/|docs/architecture\.md$|docs/infographic\.png$|hooks/|scripts/log-event\.py$|scripts/log-prompt\.py$|scripts/log-response\.py$|scripts/utils\.py$)'
+ALLOWED='^(\.claude-plugin/|\.gitignore$|CHANGELOG\.md$|CLAUDE\.md$|CONTRIBUTING\.md$|LICENSE$|README\.md$|commands/|docs/architecture\.md$|docs/infographic\.png$|hooks/|scripts/log-event\.py$|scripts/log-prompt\.py$|scripts/log-response\.py$|scripts/utils\.py$|skills/)'
 git diff --cached --name-only | grep -vE "$ALLOWED" | xargs -r git rm --cached
 
 # 4. Remove non-allowlisted files left on disk
