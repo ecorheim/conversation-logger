@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Default memory scope in auto-generated config changed from `user` to `project`
+
 ## [0.4.1] - 2026-02-19
 
 ### Added
