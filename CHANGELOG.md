@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0] - 2026-02-18
+
+### Added
+- Log session lifecycle events: session start/end, subagent activity, context compaction, and tool failures
+  - New `log-event.py` script handles six new hook events via a single entry point
+  - `SessionStart`: records a session marker (source, model) at the top of each log file; creates session metadata so subsequent hooks can locate the log file before the first user prompt
+  - `SessionEnd`: records session close reason; cleans up session metadata
+  - `SubagentStart` / `SubagentStop`: records when Task-tool subagents are spawned and complete (type, ID)
+  - `PreCompact`: records when context is compacted (auto or manual trigger)
+  - `PostToolUseFailure`: records tool execution failures with tool name and first-line error summary (max 200 chars)
+  - Text format: `~`-prefixed single-line entries for easy grep
+  - Markdown format: `>` blockquote entries visually distinct from conversation headings
+
+### Changed
+- Markdown log header is now guaranteed even when `SessionStart` fires before the first user prompt
+  - Extracted `ensure_markdown_header()` as a shared utility used by both `log-event.py` and `log-prompt.py`
+- Log file path resolution refactored into shared `resolve_log_path()` utility used by `log-response.py` and `log-event.py`
+
 ## [0.2.4] - 2026-02-13
 
 ### Fixed
