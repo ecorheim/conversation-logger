@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3] - 2026-02-20
+
+### Fixed
+- Fix new log file created on every prompt after session creation time was added to filenames
+  - `log-prompt.py` now uses `resolve_log_path()` to reuse the cached log path from temp_session instead of generating a new timestamp on each call
+  - `log-response.py` no longer deletes the temp_session file after the Stop hook; cleanup is handled by the SessionEnd handler
+
 ## [0.4.2] - 2026-02-19
 
 ### Changed
