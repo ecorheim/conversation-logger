@@ -7,6 +7,7 @@ import json
 import sys
 import os
 import glob
+import tempfile
 from datetime import datetime
 
 DEBUG = False  # Debug mode
@@ -160,3 +161,193 @@ def ensure_markdown_header(f, log_file):
     except OSError:
         date_str = datetime.now().strftime('%Y-%m-%d')
         f.write(f"# Conversation Log \u2014 {date_str}\n")
+
+
+# ---------------------------------------------------------------------------
+# Context Keeper utilities
+# ---------------------------------------------------------------------------
+
+def get_context_keeper_config(cwd):
+    """Get context-keeper config from conversation-logger config files.
+    Returns: {"enabled": bool, "scope": str}
+    Default: {"enabled": True, "scope": "user"}
+    ENV (CONVERSATION_LOG_FORMAT) does not affect context_keeper settings.
+    """
+    for path in [
+        os.path.join(cwd, ".claude", "conversation-logger-config.json"),
+        os.path.join(os.path.expanduser("~"), ".claude", "conversation-logger-config.json"),
+    ]:
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            if "context_keeper" not in config:
+                continue
+            ck = config["context_keeper"]
+            scope = ck.get("scope", "user")
+            if scope not in ("user", "project", "local"):
+                print(f"Warning: invalid context_keeper scope '{scope}', using 'user'", file=sys.stderr)
+                scope = "user"
+            return {"enabled": ck.get("enabled", True), "scope": scope}
+        except (json.JSONDecodeError, IOError):
+            continue
+    return {"enabled": True, "scope": "user"}
+
+
+def get_memory_path(cwd, scope="user"):
+    """Get MEMORY.md path based on scope.
+    - user:    ~/.claude/projects/<sanitized>/memory/MEMORY.md
+    - project: <cwd>/.context-keeper/memory/MEMORY.md
+    - local:   <cwd>/.context-keeper/memory.local/MEMORY.md
+    """
+    if scope == "project":
+        return os.path.join(cwd, ".context-keeper", "memory", "MEMORY.md")
+    elif scope == "local":
+        return os.path.join(cwd, ".context-keeper", "memory.local", "MEMORY.md")
+    else:  # user (default)
+        if os.name == 'nt':
+            sanitized = cwd.replace(':', '').replace('\\', '-').lstrip('-')
+        else:
+            sanitized = cwd.lstrip('/').replace('/', '-')
+        return os.path.join(
+            os.path.expanduser("~"), ".claude", "projects", sanitized, "memory", "MEMORY.md"
+        )
+
+
+def read_active_work(memory_file):
+    """Extract ## Active Work section content from MEMORY.md.
+    Returns section content as str, or empty string if not found or file missing.
+    """
+    if not os.path.isfile(memory_file):
+        return ""
+    try:
+        with open(memory_file, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        in_section = False
+        result = []
+        for line in lines:
+            if not in_section:
+                if line.startswith("## Active Work"):
+                    in_section = True
+            else:
+                if line.startswith("## "):
+                    break
+                result.append(line)
+        return "".join(result).strip()
+    except (IOError, OSError) as e:
+        print(f"Warning: failed to read {memory_file}: {e}", file=sys.stderr)
+        return ""
+
+
+def write_compaction_marker(memory_file, trigger, modified_files):
+    """Insert compaction marker into ## Active Work section of MEMORY.md.
+    Creates the section if it doesn't exist. Uses atomic write (temp + os.replace).
+    """
+    try:
+        with open(memory_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+        lines = content.splitlines(keepends=True)
+    except (IOError, OSError) as e:
+        print(f"Warning: failed to read {memory_file}: {e}", file=sys.stderr)
+        return
+
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+    marker = f"<!-- compaction: {trigger} at {timestamp} -->"
+
+    new_lines = []
+    if any(line.startswith("## Active Work") for line in lines):
+        inserted = False
+        for line in lines:
+            new_lines.append(line)
+            if not inserted and line.startswith("## Active Work"):
+                new_lines.append(marker + "\n")
+                if modified_files:
+                    new_lines.append("- [Compaction occurred] Files modified in previous context:\n")
+                    for fp in modified_files:
+                        new_lines.append(f"  - {fp}\n")
+                inserted = True
+    else:
+        new_lines = list(lines)
+        if new_lines and not new_lines[-1].endswith('\n'):
+            new_lines.append('\n')
+        new_lines.append('\n')
+        new_lines.append("## Active Work\n")
+        new_lines.append(marker + "\n")
+        if modified_files:
+            new_lines.append("- [Compaction occurred] Files modified in previous context:\n")
+            for fp in modified_files:
+                new_lines.append(f"  - {fp}\n")
+
+    try:
+        dir_name = os.path.dirname(os.path.abspath(memory_file))
+        with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=dir_name,
+                                         delete=False, suffix='.tmp') as tmp:
+            tmp.writelines(new_lines)
+            tmp_path = tmp.name
+        os.replace(tmp_path, memory_file)
+    except (IOError, OSError) as e:
+        print(f"Warning: failed to write compaction marker to {memory_file}: {e}", file=sys.stderr)
+
+
+def extract_modified_files(transcript_path, max_lines=100, max_files=20):
+    """Extract file paths from Edit/Write tool uses in transcript JSONL.
+    Reads last max_lines lines, deduplicates, returns list of paths.
+    """
+    if not transcript_path or not os.path.isfile(transcript_path):
+        return []
+    try:
+        with open(transcript_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        recent = lines[-max_lines:] if len(lines) > max_lines else lines
+        seen = set()
+        files = []
+        for line in recent:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+            except (json.JSONDecodeError, ValueError):
+                continue
+            if entry.get("type") != "tool_use":
+                continue
+            if entry.get("tool_name") not in ("Edit", "Write"):
+                continue
+            fp = entry.get("tool_input", {}).get("file_path", "")
+            if fp and fp not in seen:
+                seen.add(fp)
+                files.append(fp)
+                if len(files) >= max_files:
+                    break
+        return files
+    except (IOError, OSError) as e:
+        print(f"Warning: failed to read transcript {transcript_path}: {e}", file=sys.stderr)
+        return []
+
+
+def build_restore_context(memory_file, source):
+    """Build additionalContext string for SessionStart hook.
+    Returns context string, or None if nothing to restore.
+    """
+    if not os.path.isfile(memory_file):
+        return None
+    active_work = read_active_work(memory_file)
+    if active_work:
+        return (
+            f"[Context Keeper] Session source: {source}. "
+            f"Active work detected from previous session:\n{active_work}\n"
+            f"Read the full MEMORY.md and referenced topic files for complete context before continuing."
+        )
+    try:
+        with open(memory_file, 'r', encoding='utf-8') as f:
+            line_count = sum(1 for _ in f)
+        if line_count > 5:
+            return (
+                f"[Context Keeper] Session source: {source}. "
+                f"MEMORY.md exists ({line_count} lines) but no Active Work section found. "
+                f"Read MEMORY.md if you need project context."
+            )
+    except (IOError, OSError):
+        pass
+    return None
