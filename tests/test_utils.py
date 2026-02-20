@@ -344,95 +344,9 @@ class TestEnsureConfig(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# extract_recent_prompts
+# build_restore_context (new: always returns directive)
 # ---------------------------------------------------------------------------
-class TestExtractRecentPrompts(unittest.TestCase):
-
-    def _text_log(self, prompts):
-        """Build text-format log content from list of (timestamp, text) tuples."""
-        content = ""
-        for ts, text in prompts:
-            content += f"\n{'='*80}\n"
-            ts_part = f" ({ts})" if ts else ""
-            content += f"\U0001f464 USER{ts_part}:\n{text}\n"
-            content += f"{'-'*80}\n"
-        return content
-
-    def _md_log(self, prompts):
-        """Build markdown-format log content from list of (timestamp, text) tuples."""
-        content = "# Conversation Log\n"
-        for ts, text in prompts:
-            content += f"\n---\n\n## \U0001f464 User \u2014 {ts}\n\n{text}\n"
-        return content
-
-    def test_text_single_prompt(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = os.path.join(tmpdir, "log.txt")
-            with open(path, 'w', encoding='utf-8') as f:
-                f.write(self._text_log([("10:00:00", "Fix the login button")]))
-            result = utils.extract_recent_prompts(path, "text")
-            self.assertEqual(len(result), 1)
-            self.assertEqual(result[0][0], "10:00:00")
-            self.assertIn("Fix the login button", result[0][1])
-
-    def test_text_legacy_no_timestamp(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = os.path.join(tmpdir, "log.txt")
-            with open(path, 'w', encoding='utf-8') as f:
-                f.write(self._text_log([("", "Old prompt without timestamp")]))
-            result = utils.extract_recent_prompts(path, "text")
-            self.assertEqual(len(result), 1)
-            self.assertEqual(result[0][0], "")
-            self.assertIn("Old prompt without timestamp", result[0][1])
-
-    def test_markdown_single_prompt(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = os.path.join(tmpdir, "log.md")
-            with open(path, 'w', encoding='utf-8') as f:
-                f.write(self._md_log([("14:30:00", "Update the tests")]))
-                f.write("\n---\n")
-            result = utils.extract_recent_prompts(path, "markdown")
-            self.assertEqual(len(result), 1)
-            self.assertEqual(result[0][0], "14:30:00")
-            self.assertIn("Update the tests", result[0][1])
-
-    def test_nonexistent_file_returns_empty(self):
-        result = utils.extract_recent_prompts("/nonexistent/path.txt", "text")
-        self.assertEqual(result, [])
-
-    def test_empty_file_returns_empty(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = os.path.join(tmpdir, "log.txt")
-            open(path, 'w').close()
-            result = utils.extract_recent_prompts(path, "text")
-            self.assertEqual(result, [])
-
-    def test_truncation_at_max_length(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = os.path.join(tmpdir, "log.txt")
-            with open(path, 'w', encoding='utf-8') as f:
-                f.write(self._text_log([("09:00:00", "A" * 300)]))
-            result = utils.extract_recent_prompts(path, "text", max_length=200)
-            self.assertEqual(len(result), 1)
-            self.assertTrue(result[0][1].endswith("..."))
-            self.assertEqual(len(result[0][1]), 203)  # 200 + len("...")
-
-    def test_max_prompts_returns_last_n(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = os.path.join(tmpdir, "log.txt")
-            prompts = [(f"0{i}:00:00", f"Prompt {i}") for i in range(5)]
-            with open(path, 'w', encoding='utf-8') as f:
-                f.write(self._text_log(prompts))
-            result = utils.extract_recent_prompts(path, "text", max_prompts=2)
-            self.assertEqual(len(result), 2)
-            self.assertIn("Prompt 3", result[0][1])
-            self.assertIn("Prompt 4", result[1][1])
-
-
-# ---------------------------------------------------------------------------
-# write_compaction_marker with recent_prompts
-# ---------------------------------------------------------------------------
-class TestWriteCompactionMarkerWithPrompts(unittest.TestCase):
+class TestBuildRestoreContext(unittest.TestCase):
 
     def _make_memory(self, tmpdir, content):
         path = os.path.join(tmpdir, "MEMORY.md")
@@ -440,57 +354,141 @@ class TestWriteCompactionMarkerWithPrompts(unittest.TestCase):
             f.write(content)
         return path
 
-    def test_recent_prompts_written_to_output(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = self._make_memory(tmpdir, "# Memory\n\n## Active Work\n\n")
-            recent_prompts = [("10:05", "Fix the login button"), ("10:08", "Update the tests")]
-            utils.write_compaction_marker(path, "auto", [], recent_prompts)
-            with open(path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            self.assertIn("[Auto-saved context] Recent user requests before compaction:", content)
-            self.assertIn("[10:05] Fix the login button", content)
-            self.assertIn("[10:08] Update the tests", content)
+    def test_no_memory_file_returns_string_not_none(self):
+        """When MEMORY.md doesn't exist, returns a string (not None)."""
+        result = utils.build_restore_context("/nonexistent/path/MEMORY.md", "startup")
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, str)
 
-    def test_no_recent_prompts_skips_section(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = self._make_memory(tmpdir, "# Memory\n\n## Active Work\n\n")
-            utils.write_compaction_marker(path, "auto", [], None)
-            with open(path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            self.assertNotIn("Recent user requests", content)
+    def test_no_memory_file_includes_memory_path_in_directive(self):
+        """Directive includes the exact memory_file path."""
+        path = "/nonexistent/path/MEMORY.md"
+        result = utils.build_restore_context(path, "startup")
+        self.assertIn(path, result)
 
-    def test_modified_files_use_new_label(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = self._make_memory(tmpdir, "# Memory\n\n## Active Work\n\n")
-            utils.write_compaction_marker(path, "auto", ["scripts/utils.py"], None)
-            with open(path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            self.assertIn("[Auto-saved context] Files modified in previous context:", content)
-            self.assertIn("scripts/utils.py", content)
+    def test_no_memory_file_includes_maintain_directive(self):
+        """Directive instructs Claude to maintain Active Work."""
+        result = utils.build_restore_context("/nonexistent/path/MEMORY.md", "startup")
+        self.assertIn("Maintain", result)
+        self.assertIn("Active Work", result)
 
-    def test_both_prompts_and_files_in_order(self):
+    def test_no_memory_file_includes_recovery_anchor(self):
+        """Directive mentions recovery anchor."""
+        result = utils.build_restore_context("/nonexistent/path/MEMORY.md", "startup")
+        self.assertIn("recovery anchor", result)
+
+    def test_active_work_returns_content_and_directive(self):
+        """When Active Work exists, returns content plus directive."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            path = self._make_memory(tmpdir, "# Memory\n\n## Active Work\n\n")
-            recent_prompts = [("15:00", "Some request")]
-            utils.write_compaction_marker(path, "manual", ["a.py", "b.py"], recent_prompts)
-            with open(path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            self.assertIn("[Auto-saved context] Recent user requests before compaction:", content)
-            self.assertIn("[Auto-saved context] Files modified in previous context:", content)
-            self.assertLess(
-                content.index("Recent user requests"),
-                content.index("Files modified")
+            path = self._make_memory(
+                tmpdir,
+                "# Memory\n\n## Active Work\n\n- Working on feature X | In progress | Write tests\n"
             )
+            result = utils.build_restore_context(path, "startup")
+            self.assertIsNotNone(result)
+            self.assertIn("Working on feature X", result)
+            self.assertIn("Maintain", result)
 
-    def test_empty_timestamp_no_bracket_prefix(self):
+    def test_memory_exists_no_active_work_large_file_returns_directive(self):
+        """MEMORY.md with >5 lines but no Active Work section: line count msg + directive."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            content = "# Memory\n\n## Notes\n\nLine 1\nLine 2\nLine 3\nLine 4\nLine 5\n"
+            path = self._make_memory(tmpdir, content)
+            result = utils.build_restore_context(path, "startup")
+            self.assertIsNotNone(result)
+            self.assertIn("lines", result)
+            self.assertIn("Maintain", result)
+
+    def test_memory_exists_no_active_work_small_file_returns_directive(self):
+        """MEMORY.md with <=5 lines and no Active Work: returns directive."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = self._make_memory(tmpdir, "# Memory\n\nstuff\n")
+            result = utils.build_restore_context(path, "startup")
+            self.assertIsNotNone(result)
+            self.assertIn("Maintain", result)
+
+    def test_source_included_in_output(self):
+        """Session source is included in output."""
+        result = utils.build_restore_context("/nonexistent/MEMORY.md", "my-source")
+        self.assertIn("my-source", result)
+
+
+# ---------------------------------------------------------------------------
+# write_compaction_marker (simplified: no recent_prompts, cleans old markers)
+# ---------------------------------------------------------------------------
+class TestWriteCompactionMarkerSimplified(unittest.TestCase):
+
+    def _make_memory(self, tmpdir, content):
+        path = os.path.join(tmpdir, "MEMORY.md")
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        return path
+
+    def test_no_recent_prompts_param(self):
+        """write_compaction_marker signature must not include recent_prompts."""
+        import inspect
+        sig = inspect.signature(utils.write_compaction_marker)
+        self.assertNotIn("recent_prompts", sig.parameters)
+
+    def test_modified_files_written(self):
+        """modified_files list is written under Files modified section."""
         with tempfile.TemporaryDirectory() as tmpdir:
             path = self._make_memory(tmpdir, "# Memory\n\n## Active Work\n\n")
-            recent_prompts = [("", "Legacy prompt without timestamp")]
-            utils.write_compaction_marker(path, "auto", [], recent_prompts)
+            utils.write_compaction_marker(path, "auto", ["scripts/utils.py", "scripts/log-event.py"])
             with open(path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            self.assertIn("Legacy prompt without timestamp", content)
-            self.assertNotIn("[] Legacy", content)
+            self.assertIn("scripts/utils.py", content)
+            self.assertIn("scripts/log-event.py", content)
+            self.assertIn("Files modified in previous context", content)
+
+    def test_no_modified_files_skips_file_section(self):
+        """When modified_files is None, no file section is written."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = self._make_memory(tmpdir, "# Memory\n\n## Active Work\n\n")
+            utils.write_compaction_marker(path, "auto", None)
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.assertNotIn("Files modified", content)
+
+    def test_cleans_previous_compaction_marker(self):
+        """Second call removes first marker block, only latest marker remains."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = self._make_memory(tmpdir, "# Memory\n\n## Active Work\n\n")
+            utils.write_compaction_marker(path, "auto", ["a.py"])
+            utils.write_compaction_marker(path, "auto", ["b.py"])
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.assertEqual(content.count("<!-- compaction:"), 1)
+            self.assertIn("b.py", content)
+            self.assertNotIn("a.py", content)
+
+    def test_preserves_claude_written_items(self):
+        """Claude-written items below the old marker are preserved after cleanup."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            content = (
+                "# Memory\n\n## Active Work\n\n"
+                "<!-- compaction: auto at 2026-01-01 10:00 -->\n"
+                "- [Auto-saved context] Files modified in previous context:\n"
+                "  - old.py\n"
+                "- [Implement feature X] | Done | Write tests\n"
+            )
+            path = self._make_memory(tmpdir, content)
+            utils.write_compaction_marker(path, "auto", ["new.py"])
+            with open(path, 'r', encoding='utf-8') as f:
+                result = f.read()
+            self.assertNotIn("old.py", result)
+            self.assertIn("Implement feature X", result)
+            self.assertIn("new.py", result)
+
+    def test_creates_active_work_section_if_missing(self):
+        """Creates ## Active Work section if it doesn't exist."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = self._make_memory(tmpdir, "# Memory\n\n## Notes\n\nSome notes\n")
+            utils.write_compaction_marker(path, "auto", [])
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.assertIn("## Active Work", content)
+            self.assertIn("<!-- compaction:", content)
 
 
 if __name__ == '__main__':
