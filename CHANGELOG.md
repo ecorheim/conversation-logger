@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.7] - 2026-02-20
+
+### Changed
+- PreCompact hook now auto-saves recent user prompts to MEMORY.md Active Work section
+  - Extracts last 3 user prompts from conversation log file before compaction
+  - Post-compaction SessionStart automatically restores this context via additionalContext
+  - Workaround for Claude Code bug #13668 (empty transcript_path in PreCompact)
+
 ## [0.4.6] - 2026-02-20
 
 ### Fixed
