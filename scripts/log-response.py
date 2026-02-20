@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils import (
     setup_encoding, get_log_dir, get_log_file_path, get_log_format,
     read_temp_session, cleanup_stale_temp_files, debug_log, calculate_fence,
-    resolve_log_path
+    resolve_log_path, ensure_markdown_header
 )
 
 # Ensure stdout/stderr can handle Unicode on Windows
@@ -371,10 +371,12 @@ def log_response():
         debug_log(log_dir, f"Follow-ups collected: {len(follow_ups)}")
 
         # Format output and write to log
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
         with open(log_file, 'a', encoding='utf-8') as f:
             timestamp = datetime.now().strftime('%H:%M:%S')
 
             if log_format == "markdown":
+                ensure_markdown_header(f, log_file)
                 _write_followups_markdown(f, follow_ups)
 
                 formatted_parts = _format_output_markdown(all_outputs)
