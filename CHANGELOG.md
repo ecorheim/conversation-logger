@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- context-keeper default memory scope changed from `user` to `project`
+  - Shared team memory (`.context-keeper/memory/MEMORY.md`) is now the default when no explicit scope is configured
+  - Affects `scripts/utils.py` fallback, `CLAUDE.md`, `skills/context-keeper/SKILL.md`, and `commands/setup.md`
+
 ## [0.4.4] - 2026-02-20
 
 ### Fixed

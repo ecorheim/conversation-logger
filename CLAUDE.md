@@ -55,11 +55,11 @@ log-prompt.py              log-response.py          log-event.py
   "log_format": "text",
   "context_keeper": {
     "enabled": true,
-    "scope": "user"
+    "scope": "project"
   }
 }
 ```
-scope: `"user"` (기본, `~/.claude/projects/<sanitized>/memory/MEMORY.md`) | `"project"` (`<cwd>/.context-keeper/memory/`) | `"local"` (`<cwd>/.context-keeper/memory.local/`)
+scope: `"project"` (기본, `<cwd>/.context-keeper/memory/MEMORY.md`) | `"user"` (`~/.claude/projects/<sanitized>/memory/MEMORY.md`) | `"local"` (`<cwd>/.context-keeper/memory.local/MEMORY.md`)
 
 **Key Files**: `scripts/log-response.py` (핵심 로직), `scripts/utils.py` (공유 모듈), `hooks/hooks.json` (훅 등록)
 **Data Flow**: stdin(JSON) → log-prompt.py → temp_session 파일 → log-response.py → 세션 트랜스크립트(JSONL) 파싱 → 로그 파일 append
