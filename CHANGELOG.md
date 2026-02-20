@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.4.5] - 2026-02-20
 
 ### Changed
 - context-keeper default memory scope changed from `user` to `project`
