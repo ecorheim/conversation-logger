@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.4.7] - 2026-02-20
 
 ### Changed
 - PreCompact hook now auto-saves recent user prompts to MEMORY.md Active Work section
