@@ -31,6 +31,7 @@ def log_prompt():
         # Write prompt to log
         timestamp = datetime.now().strftime('%H:%M:%S')
 
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
         with open(log_file, 'a', encoding='utf-8') as f:
             if log_format == "markdown":
                 _write_prompt_markdown(f, log_file, prompt, timestamp)

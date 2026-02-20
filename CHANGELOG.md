@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.4] - 2026-02-20
+
+### Fixed
+- Log file and directory are automatically recreated if deleted during an active session
+  - `log-response.py`: ensures the log directory exists before writing and writes the markdown header when starting a new file mid-session
+  - `log-prompt.py`: ensures the log directory exists before writing
+
 ## [0.4.3] - 2026-02-20
 
 ### Fixed
