@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.6] - 2026-02-20
+
+### Fixed
+- Fix duplicate log files created when working directory changes during a session
+  - Temp session files moved from `{cwd}/.claude/logs/` to `~/.claude/tmp/` so they are found regardless of cwd changes
+  - When cwd changed mid-session, the original temp session was no longer found, causing a new log file with a different format to be created
+  - `utils.py`: added `get_temp_session_dir()`, `delete_temp_session()`; updated `read_temp_session`, `write_temp_session`, `cleanup_stale_temp_files` signatures to use fixed path by default
+
 ## [0.4.5] - 2026-02-20
 
 ### Changed
