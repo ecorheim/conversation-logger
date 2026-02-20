@@ -213,12 +213,12 @@ def get_context_keeper_config(cwd):
             ck = config["context_keeper"]
             scope = ck.get("scope", "user")
             if scope not in ("user", "project", "local"):
-                print(f"Warning: invalid context_keeper scope '{scope}', using 'user'", file=sys.stderr)
-                scope = "user"
+                print(f"Warning: invalid context_keeper scope '{scope}', using 'project'", file=sys.stderr)
+                scope = "project"
             return {"enabled": ck.get("enabled", True), "scope": scope}
         except (json.JSONDecodeError, IOError):
             continue
-    return {"enabled": True, "scope": "user"}
+    return {"enabled": True, "scope": "project"}
 
 
 def get_memory_path(cwd, scope="user"):
