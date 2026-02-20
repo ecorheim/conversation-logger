@@ -85,7 +85,7 @@ class TestTextDefaultWithoutConfig(unittest.TestCase):
                 self.assertEqual(len(txt_files), 1)
 
                 # Check temp_session
-                temp = utils.read_temp_session(log_dir, "sess-1")
+                temp = utils.read_temp_session("sess-1")
                 self.assertIsNotNone(temp)
                 self.assertEqual(temp["log_format"], "text")
                 self.assertIn("log_file_path", temp)
@@ -115,7 +115,7 @@ class TestMarkdownE2E(unittest.TestCase):
                 _run_prompt(tmpdir, "sess-md", "Hello Claude")
 
                 log_dir = os.path.join(tmpdir, ".claude", "logs")
-                temp = utils.read_temp_session(log_dir, "sess-md")
+                temp = utils.read_temp_session("sess-md")
                 log_path = temp["log_file_path"]
 
                 self.assertTrue(log_path.endswith(".md"))
@@ -185,7 +185,7 @@ class TestPromptResponseConsistency(unittest.TestCase):
                 _run_prompt(tmpdir, "sess-c", "Test prompt")
 
                 log_dir = os.path.join(tmpdir, ".claude", "logs")
-                temp = utils.read_temp_session(log_dir, "sess-c")
+                temp = utils.read_temp_session("sess-c")
                 prompt_log_path = temp["log_file_path"]
 
                 transcript_path = os.path.join(tmpdir, "transcript.jsonl")
@@ -255,7 +255,7 @@ class TestMarkdownSecondPrompt(unittest.TestCase):
                 _run_prompt(tmpdir, "sess-2p", "First question")
 
                 log_dir = os.path.join(tmpdir, ".claude", "logs")
-                temp = utils.read_temp_session(log_dir, "sess-2p")
+                temp = utils.read_temp_session("sess-2p")
                 log_path = temp["log_file_path"]
 
                 # Simulate response so temp_session is consumed
@@ -289,7 +289,7 @@ class TestCLAUDEHeaderEmoji(unittest.TestCase):
                 _run_prompt(tmpdir, "sess-em", "Hello")
 
                 log_dir = os.path.join(tmpdir, ".claude", "logs")
-                temp = utils.read_temp_session(log_dir, "sess-em")
+                temp = utils.read_temp_session("sess-em")
                 log_path = temp["log_file_path"]
 
                 transcript_path = os.path.join(tmpdir, "transcript.jsonl")

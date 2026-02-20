@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils import (
     setup_encoding, get_log_dir, get_log_format, get_log_file_path,
     write_temp_session, read_temp_session, cleanup_stale_temp_files,
+    delete_temp_session,
     resolve_log_path, ensure_markdown_header, ensure_config,
     get_context_keeper_config, get_memory_path,
     read_active_work, write_compaction_marker,
@@ -36,8 +37,8 @@ def handle_session_start(input_data, log_file, log_format, log_dir, session_id, 
 
     # Create temp_session so subsequent hooks can find the log path.
     # log-prompt.py will overwrite this with prompt data later.
-    if not read_temp_session(log_dir, session_id):
-        write_temp_session(log_dir, session_id, {
+    if not read_temp_session(session_id):
+        write_temp_session(session_id, {
             "session_id": session_id,
             "cwd": cwd,
             "log_format": log_format,
@@ -81,11 +82,8 @@ def handle_session_end(input_data, log_file, log_format, log_dir, session_id, cw
             f.write(f"~ SESSION END ({ts}) | reason={reason}\n")
 
     # Clean up temp_session if still present (Stop hook may have already deleted it)
-    temp_file = os.path.join(log_dir, f".temp_session_{session_id}.json")
-    if os.path.exists(temp_file):
-        os.remove(temp_file)
-
-    cleanup_stale_temp_files(log_dir)
+    delete_temp_session(session_id)
+    cleanup_stale_temp_files()
 
 
 def handle_subagent_start(input_data, log_file, log_format, log_dir, session_id, cwd):

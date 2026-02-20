@@ -111,9 +111,18 @@ def get_log_format(cwd):
     return load_config(cwd).get("log_format", "text")
 
 
-def read_temp_session(log_dir, session_id):
+def get_temp_session_dir():
+    """Get fixed directory for temp session files (cwd-independent)."""
+    temp_dir = os.path.join(os.path.expanduser("~"), ".claude", "tmp")
+    os.makedirs(temp_dir, exist_ok=True)
+    return temp_dir
+
+
+def read_temp_session(session_id, temp_dir=None):
     """Read temp session JSON file. Returns dict or None."""
-    temp_file = os.path.join(log_dir, f".temp_session_{session_id}.json")
+    if temp_dir is None:
+        temp_dir = get_temp_session_dir()
+    temp_file = os.path.join(temp_dir, f".temp_session_{session_id}.json")
     if not os.path.exists(temp_file):
         return None
     try:
@@ -123,16 +132,29 @@ def read_temp_session(log_dir, session_id):
         return None
 
 
-def write_temp_session(log_dir, session_id, data):
+def write_temp_session(session_id, data, temp_dir=None):
     """Write temp session JSON file."""
-    temp_file = os.path.join(log_dir, f".temp_session_{session_id}.json")
+    if temp_dir is None:
+        temp_dir = get_temp_session_dir()
+    temp_file = os.path.join(temp_dir, f".temp_session_{session_id}.json")
     with open(temp_file, 'w', encoding='utf-8') as f:
         json.dump(data, f)
 
 
-def cleanup_stale_temp_files(log_dir, max_age_seconds=3600):
+def delete_temp_session(session_id, temp_dir=None):
+    """Delete temp session file."""
+    if temp_dir is None:
+        temp_dir = get_temp_session_dir()
+    temp_file = os.path.join(temp_dir, f".temp_session_{session_id}.json")
+    if os.path.exists(temp_file):
+        os.remove(temp_file)
+
+
+def cleanup_stale_temp_files(temp_dir=None, max_age_seconds=3600):
     """Remove temp session files older than max_age_seconds (default 1 hour)."""
-    temp_pattern = os.path.join(log_dir, ".temp_session_*.json")
+    if temp_dir is None:
+        temp_dir = get_temp_session_dir()
+    temp_pattern = os.path.join(temp_dir, ".temp_session_*.json")
     for temp_f in glob.glob(temp_pattern):
         try:
             if os.path.getmtime(temp_f) < (datetime.now().timestamp() - max_age_seconds):
@@ -170,7 +192,7 @@ def calculate_fence(content):
 def resolve_log_path(cwd, session_id):
     """Resolve log file path: try temp_session first, fall back to config chain."""
     log_dir = get_log_dir(cwd)
-    temp_data = read_temp_session(log_dir, session_id)
+    temp_data = read_temp_session(session_id)
     if temp_data and temp_data.get("log_file_path"):
         return temp_data["log_file_path"], temp_data.get("log_format", "text"), log_dir
     log_format = get_log_format(cwd)
