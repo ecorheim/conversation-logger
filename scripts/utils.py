@@ -91,7 +91,7 @@ def ensure_config(cwd):
     default = {
         "log_format": "text",
         "context_keeper": {
-            "enabled": True,
+            "enabled": False,
             "scope": "project"
         }
     }
@@ -218,7 +218,7 @@ def ensure_markdown_header(f, log_file):
 def get_context_keeper_config(cwd):
     """Get context-keeper config from conversation-logger config files.
     Returns: {"enabled": bool, "scope": str}
-    Default: {"enabled": True, "scope": "user"}
+    Default: {"enabled": False, "scope": "project"}
     ENV (CONVERSATION_LOG_FORMAT) does not affect context_keeper settings.
     """
     for path in [
@@ -237,10 +237,10 @@ def get_context_keeper_config(cwd):
             if scope not in ("user", "project", "local"):
                 print(f"Warning: invalid context_keeper scope '{scope}', using 'project'", file=sys.stderr)
                 scope = "project"
-            return {"enabled": ck.get("enabled", True), "scope": scope}
+            return {"enabled": ck.get("enabled", False), "scope": scope}
         except (json.JSONDecodeError, IOError):
             continue
-    return {"enabled": True, "scope": "project"}
+    return {"enabled": False, "scope": "project"}
 
 
 def get_memory_path(cwd, scope="user"):
