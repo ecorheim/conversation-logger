@@ -306,7 +306,7 @@ class TestEnsureConfig(unittest.TestCase):
             with open(project_config, 'r', encoding='utf-8') as f:
                 config = json.load(f)
             self.assertEqual(config["log_format"], "text")
-            self.assertTrue(config["context_keeper"]["enabled"])
+            self.assertFalse(config["context_keeper"]["enabled"])
             self.assertEqual(config["context_keeper"]["scope"], "project")
 
     def test_skips_when_project_config_exists(self):

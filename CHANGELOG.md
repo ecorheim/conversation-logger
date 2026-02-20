@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.4.8] - 2026-02-20
 
 ### Changed
 - Replace mechanical prompt extraction with Claude-driven Active Work maintenance
