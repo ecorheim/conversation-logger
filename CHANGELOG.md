@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.4.4] - 2026-02-20
 
 ### Fixed
 - Log file and directory are automatically recreated if deleted during an active session
