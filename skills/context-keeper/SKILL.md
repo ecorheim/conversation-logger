@@ -103,11 +103,11 @@ conversation-logger supports three storage scopes for context-keeper memory:
 
 ### Scope Types
 
-- **user** (default): `~/.claude/projects/<sanitized>/memory/MEMORY.md`
+- **user**: `~/.claude/projects/<sanitized>/memory/MEMORY.md`
   - Personal memory, not visible to teammates
   - Claude Code standard auto-memory location
 
-- **project**: `<cwd>/.context-keeper/memory/MEMORY.md`
+- **project** (default): `<cwd>/.context-keeper/memory/MEMORY.md`
   - Shared team memory, committed to git for collaboration
   - Add `.context-keeper/memory/` directory to git tracking
 

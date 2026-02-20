@@ -26,8 +26,8 @@ You are configuring the **conversation-logger** plugin.
    - **disabled** — Turn off context-keeper functionality
 
 5. **Ask context-keeper scope** (only if enabled): Ask which memory scope to use:
-   - **user** — Personal memory at `~/.claude/projects/<project>/memory/MEMORY.md` (default, private)
-   - **project** — Shared team memory at `{project}/.context-keeper/memory/MEMORY.md` (committed to git)
+   - **user** — Personal memory at `~/.claude/projects/<project>/memory/MEMORY.md` (private)
+   - **project** — Shared team memory at `{project}/.context-keeper/memory/MEMORY.md` (default, committed to git)
    - **local** — Per-project personal memory at `{project}/.context-keeper/memory.local/MEMORY.md` (gitignored)
 
 6. **Save config**: Use the Write tool to save the config JSON to the chosen path:
@@ -36,7 +36,7 @@ You are configuring the **conversation-logger** plugin.
      "log_format": "text",
      "context_keeper": {
        "enabled": true,
-       "scope": "user"
+       "scope": "project"
      }
    }
    ```
