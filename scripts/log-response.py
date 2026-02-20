@@ -394,7 +394,7 @@ def log_response():
                 f.write(f"{'='*80}\n\n")
 
         # Clean up stale temporary files
-        cleanup_stale_temp_files(log_dir)
+        cleanup_stale_temp_files()
 
         print("Response logged")
 

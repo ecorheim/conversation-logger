@@ -136,20 +136,20 @@ class TestTempSession(unittest.TestCase):
     def test_write_read_roundtrip(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             data = {"session_id": "abc", "log_format": "text", "log_file_path": "/tmp/t.txt"}
-            utils.write_temp_session(tmpdir, "abc", data)
-            result = utils.read_temp_session(tmpdir, "abc")
+            utils.write_temp_session("abc", data, temp_dir=tmpdir)
+            result = utils.read_temp_session("abc", temp_dir=tmpdir)
             self.assertEqual(result, data)
 
     def test_nonexistent_file_returns_none(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            self.assertIsNone(utils.read_temp_session(tmpdir, "nonexistent"))
+            self.assertIsNone(utils.read_temp_session("nonexistent", temp_dir=tmpdir))
 
     def test_corrupted_json_returns_none(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             path = os.path.join(tmpdir, ".temp_session_bad.json")
             with open(path, 'w') as f:
                 f.write("{corrupted")
-            self.assertIsNone(utils.read_temp_session(tmpdir, "bad"))
+            self.assertIsNone(utils.read_temp_session("bad", temp_dir=tmpdir))
 
 
 # ---------------------------------------------------------------------------
@@ -162,7 +162,7 @@ class TestCleanupStaleTempFiles(unittest.TestCase):
             fresh = os.path.join(tmpdir, ".temp_session_fresh.json")
             with open(fresh, 'w') as f:
                 f.write('{}')
-            utils.cleanup_stale_temp_files(tmpdir)
+            utils.cleanup_stale_temp_files(temp_dir=tmpdir)
             self.assertTrue(os.path.exists(fresh))
 
     def test_stale_file_removed(self):
@@ -172,7 +172,7 @@ class TestCleanupStaleTempFiles(unittest.TestCase):
                 f.write('{}')
             old_time = time.time() - 7200
             os.utime(stale, (old_time, old_time))
-            utils.cleanup_stale_temp_files(tmpdir)
+            utils.cleanup_stale_temp_files(temp_dir=tmpdir)
             self.assertFalse(os.path.exists(stale))
 
 
@@ -229,16 +229,17 @@ class TestResolveLogPath(unittest.TestCase):
 
     def test_returns_temp_session_path_when_present(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            log_dir = utils.get_log_dir(tmpdir)
-            expected_path = os.path.join(tmpdir, "custom-log.txt")
-            utils.write_temp_session(log_dir, "sid-1", {
-                "log_file_path": expected_path,
-                "log_format": "markdown"
-            })
-            log_file, log_format, returned_log_dir = utils.resolve_log_path(tmpdir, "sid-1")
-            self.assertEqual(log_file, expected_path)
-            self.assertEqual(log_format, "markdown")
-            self.assertEqual(returned_log_dir, log_dir)
+            with patch.dict(os.environ, {"HOME": tmpdir}):
+                log_dir = utils.get_log_dir(tmpdir)
+                expected_path = os.path.join(tmpdir, "custom-log.txt")
+                utils.write_temp_session("sid-1", {
+                    "log_file_path": expected_path,
+                    "log_format": "markdown"
+                })
+                log_file, log_format, returned_log_dir = utils.resolve_log_path(tmpdir, "sid-1")
+                self.assertEqual(log_file, expected_path)
+                self.assertEqual(log_format, "markdown")
+                self.assertEqual(returned_log_dir, log_dir)
 
     def test_falls_back_to_config_when_no_temp_session(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -251,9 +252,8 @@ class TestResolveLogPath(unittest.TestCase):
     def test_temp_session_without_log_file_path_falls_back(self):
         """temp_session missing log_file_path key must fall back to config chain."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            log_dir = utils.get_log_dir(tmpdir)
-            utils.write_temp_session(log_dir, "sid-3", {"log_format": "markdown"})
             with patch.dict(os.environ, {"HOME": tmpdir, "CONVERSATION_LOG_FORMAT": ""}):
+                utils.write_temp_session("sid-3", {"log_format": "markdown"})
                 log_file, log_format, _ = utils.resolve_log_path(tmpdir, "sid-3")
                 self.assertEqual(log_format, "text")
                 self.assertTrue(log_file.endswith(".txt"))

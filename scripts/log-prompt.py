@@ -39,7 +39,7 @@ def log_prompt():
                 _write_prompt_text(f, prompt, timestamp)
 
         # Save temporary session info (used by response hook)
-        write_temp_session(log_dir, session_id, {
+        write_temp_session(session_id, {
             "session_id": session_id,
             "prompt_timestamp": datetime.now().isoformat(),
             "prompt": prompt,
