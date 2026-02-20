@@ -71,11 +71,27 @@ fi
 
 ## Commit Message
 
-The merge commit on `main` must use the **same commit message as the last dev commit**, not a merge-style message. This is because `main` is the public-facing branch on GitHub.
+The merge commit on `main` must use the **last meaningful commit message from dev** — that is, the commit just before the version bump (`🔧 chore: bump version to x.y.z`). The version bump is always the final housekeeping commit on dev before merging, so the merge commit should reflect the actual change, not the bump.
+
+```bash
+# Find the right commit message:
+git log dev --oneline
+# Example output:
+#   496d4ce 🔧 chore: bump version to 0.4.5          ← skip this
+#   1c686d4 🔧 chore: change context-keeper default scope from user to project  ← use this
+```
 
 ```
 ❌ 🔀 merge: v0.2.2 fix tool rejection ...
+❌ 🔧 chore: bump version to 0.4.5   (version bump — not the meaningful change)
 ✅ 🐛 fix: resolve tool rejection misclassification ...
+✅ 🔧 chore: change context-keeper default scope from user to project
+```
+
+In step 5 of the Merge Procedure, use:
+```bash
+# Get the commit before the version bump (skip=1)
+git log dev --skip=1 -1 --pretty=format:"%s%n%n%b"
 ```
 
 ## Merge Procedure
@@ -96,8 +112,8 @@ git diff --cached --name-only | grep -vE "$ALLOWED" | xargs -r git rm --cached
 # 4. Remove non-allowlisted files left on disk
 find . -maxdepth 3 -not -path './.git/*' -type f | sed 's|^\./||' | grep -vE "$ALLOWED" | xargs -r rm -f
 
-# 5. Commit using the SAME message as dev's last commit
-git commit -m "<copy dev's last commit message including gitmoji, subject, and body>"
+# 5. Commit using the message from the last meaningful dev commit (before version bump)
+git commit -m "<copy message of the commit just before the version bump, including gitmoji, subject, and body>"
 
 # 6. Create version tag on the merge commit
 VERSION=$(python -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])")
@@ -119,7 +135,7 @@ git checkout dev
 2. `--no-commit`: Stop before committing to allow modifications
 3. Unstage non-allowlisted files using the `ALLOWED` regex pattern (plugin structure only)
 4. Delete non-allowlisted files from disk to prevent checkout conflicts
-5. Commit message copies dev's last commit verbatim (gitmoji + type + subject + body)
+5. Commit message copies the last **meaningful** dev commit verbatim (gitmoji + type + subject + body) — skip the version bump commit, which is always the final dev commit before merging
 6. Create annotated tag `v<version>` on the merge commit (e.g., `v0.2.2`)
 7. Push main branch to origin (public) and private
 8. Push version tag to both remotes
