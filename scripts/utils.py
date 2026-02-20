@@ -288,7 +288,7 @@ def read_active_work(memory_file):
         return ""
 
 
-def write_compaction_marker(memory_file, trigger, modified_files):
+def write_compaction_marker(memory_file, trigger, modified_files, recent_prompts=None):
     """Insert compaction marker into ## Active Work section of MEMORY.md.
     Creates the section if it doesn't exist. Uses atomic write (temp + os.replace).
     """
@@ -303,17 +303,26 @@ def write_compaction_marker(memory_file, trigger, modified_files):
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
     marker = f"<!-- compaction: {trigger} at {timestamp} -->"
 
+    def _marker_lines():
+        result = [marker + "\n"]
+        if recent_prompts:
+            result.append("- [Auto-saved context] Recent user requests before compaction:\n")
+            for ts, text in recent_prompts:
+                ts_prefix = f"[{ts}] " if ts else ""
+                result.append(f"  - {ts_prefix}{text}\n")
+        if modified_files:
+            result.append("- [Auto-saved context] Files modified in previous context:\n")
+            for fp in modified_files:
+                result.append(f"  - {fp}\n")
+        return result
+
     new_lines = []
     if any(line.startswith("## Active Work") for line in lines):
         inserted = False
         for line in lines:
             new_lines.append(line)
             if not inserted and line.startswith("## Active Work"):
-                new_lines.append(marker + "\n")
-                if modified_files:
-                    new_lines.append("- [Compaction occurred] Files modified in previous context:\n")
-                    for fp in modified_files:
-                        new_lines.append(f"  - {fp}\n")
+                new_lines.extend(_marker_lines())
                 inserted = True
     else:
         new_lines = list(lines)
@@ -321,11 +330,7 @@ def write_compaction_marker(memory_file, trigger, modified_files):
             new_lines.append('\n')
         new_lines.append('\n')
         new_lines.append("## Active Work\n")
-        new_lines.append(marker + "\n")
-        if modified_files:
-            new_lines.append("- [Compaction occurred] Files modified in previous context:\n")
-            for fp in modified_files:
-                new_lines.append(f"  - {fp}\n")
+        new_lines.extend(_marker_lines())
 
     try:
         dir_name = os.path.dirname(os.path.abspath(memory_file))
@@ -372,6 +377,50 @@ def extract_modified_files(transcript_path, max_lines=100, max_files=20):
     except (IOError, OSError) as e:
         print(f"Warning: failed to read transcript {transcript_path}: {e}", file=sys.stderr)
         return []
+
+
+def extract_recent_prompts(log_file_path, log_format, max_prompts=3, max_length=200):
+    """Extract last N user prompts from conversation log file.
+    Returns: list of (timestamp_str, truncated_prompt_text) tuples.
+    """
+    import re
+    if not log_file_path or not os.path.isfile(log_file_path):
+        return []
+    try:
+        with open(log_file_path, 'rb') as f:
+            f.seek(0, 2)
+            file_size = f.tell()
+            read_size = min(65536, file_size)
+            f.seek(-read_size, 2)
+            tail = f.read().decode('utf-8', errors='replace')
+    except (IOError, OSError):
+        return []
+
+    results = []
+    if log_format == "markdown":
+        pattern = re.compile(
+            r'## \U0001f464 User \u2014 (\d{2}:\d{2}:\d{2})\n\n(.*?)(?=\n---|\n## |\n> \*\*|$)',
+            re.DOTALL
+        )
+        for m in pattern.finditer(tail):
+            ts = m.group(1)
+            text = m.group(2).strip()
+            if len(text) > max_length:
+                text = text[:max_length] + "..."
+            results.append((ts, text))
+    else:
+        pattern = re.compile(
+            r'\U0001f464 USER(?:\s*\((\d{2}:\d{2}:\d{2})\))?:\n(.*?)\n-{3,}',
+            re.DOTALL
+        )
+        for m in pattern.finditer(tail):
+            ts = m.group(1) or ""
+            text = m.group(2).strip()
+            if len(text) > max_length:
+                text = text[:max_length] + "..."
+            results.append((ts, text))
+
+    return results[-max_prompts:] if len(results) > max_prompts else results
 
 
 def build_restore_context(memory_file, source):
