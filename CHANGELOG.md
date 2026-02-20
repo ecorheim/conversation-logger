@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.4.6] - 2026-02-20
 
 ### Fixed
 - Fix duplicate log files created when working directory changes during a session
