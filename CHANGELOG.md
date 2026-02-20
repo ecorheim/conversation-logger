@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Replace mechanical prompt extraction with Claude-driven Active Work maintenance
+  - SessionStart now injects Active Work maintenance directive into every session
+  - Directive includes MEMORY.md file path so Claude knows exactly where to write
+  - PreCompact hook simplified to timestamp marker + modified files only
+  - Stale compaction markers are removed on each new compaction to prevent accumulation
+  - Remove `extract_recent_prompts()` — replaced by Claude's own session summaries
+
 ## [0.4.7] - 2026-02-20
 
 ### Changed
