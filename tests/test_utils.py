@@ -343,5 +343,155 @@ class TestEnsureConfig(unittest.TestCase):
             self.assertTrue(os.path.isdir(os.path.join(tmpdir, ".claude")))
 
 
+# ---------------------------------------------------------------------------
+# extract_recent_prompts
+# ---------------------------------------------------------------------------
+class TestExtractRecentPrompts(unittest.TestCase):
+
+    def _text_log(self, prompts):
+        """Build text-format log content from list of (timestamp, text) tuples."""
+        content = ""
+        for ts, text in prompts:
+            content += f"\n{'='*80}\n"
+            ts_part = f" ({ts})" if ts else ""
+            content += f"\U0001f464 USER{ts_part}:\n{text}\n"
+            content += f"{'-'*80}\n"
+        return content
+
+    def _md_log(self, prompts):
+        """Build markdown-format log content from list of (timestamp, text) tuples."""
+        content = "# Conversation Log\n"
+        for ts, text in prompts:
+            content += f"\n---\n\n## \U0001f464 User \u2014 {ts}\n\n{text}\n"
+        return content
+
+    def test_text_single_prompt(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "log.txt")
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(self._text_log([("10:00:00", "Fix the login button")]))
+            result = utils.extract_recent_prompts(path, "text")
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0][0], "10:00:00")
+            self.assertIn("Fix the login button", result[0][1])
+
+    def test_text_legacy_no_timestamp(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "log.txt")
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(self._text_log([("", "Old prompt without timestamp")]))
+            result = utils.extract_recent_prompts(path, "text")
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0][0], "")
+            self.assertIn("Old prompt without timestamp", result[0][1])
+
+    def test_markdown_single_prompt(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "log.md")
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(self._md_log([("14:30:00", "Update the tests")]))
+                f.write("\n---\n")
+            result = utils.extract_recent_prompts(path, "markdown")
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0][0], "14:30:00")
+            self.assertIn("Update the tests", result[0][1])
+
+    def test_nonexistent_file_returns_empty(self):
+        result = utils.extract_recent_prompts("/nonexistent/path.txt", "text")
+        self.assertEqual(result, [])
+
+    def test_empty_file_returns_empty(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "log.txt")
+            open(path, 'w').close()
+            result = utils.extract_recent_prompts(path, "text")
+            self.assertEqual(result, [])
+
+    def test_truncation_at_max_length(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "log.txt")
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(self._text_log([("09:00:00", "A" * 300)]))
+            result = utils.extract_recent_prompts(path, "text", max_length=200)
+            self.assertEqual(len(result), 1)
+            self.assertTrue(result[0][1].endswith("..."))
+            self.assertEqual(len(result[0][1]), 203)  # 200 + len("...")
+
+    def test_max_prompts_returns_last_n(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "log.txt")
+            prompts = [(f"0{i}:00:00", f"Prompt {i}") for i in range(5)]
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(self._text_log(prompts))
+            result = utils.extract_recent_prompts(path, "text", max_prompts=2)
+            self.assertEqual(len(result), 2)
+            self.assertIn("Prompt 3", result[0][1])
+            self.assertIn("Prompt 4", result[1][1])
+
+
+# ---------------------------------------------------------------------------
+# write_compaction_marker with recent_prompts
+# ---------------------------------------------------------------------------
+class TestWriteCompactionMarkerWithPrompts(unittest.TestCase):
+
+    def _make_memory(self, tmpdir, content):
+        path = os.path.join(tmpdir, "MEMORY.md")
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        return path
+
+    def test_recent_prompts_written_to_output(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = self._make_memory(tmpdir, "# Memory\n\n## Active Work\n\n")
+            recent_prompts = [("10:05", "Fix the login button"), ("10:08", "Update the tests")]
+            utils.write_compaction_marker(path, "auto", [], recent_prompts)
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.assertIn("[Auto-saved context] Recent user requests before compaction:", content)
+            self.assertIn("[10:05] Fix the login button", content)
+            self.assertIn("[10:08] Update the tests", content)
+
+    def test_no_recent_prompts_skips_section(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = self._make_memory(tmpdir, "# Memory\n\n## Active Work\n\n")
+            utils.write_compaction_marker(path, "auto", [], None)
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.assertNotIn("Recent user requests", content)
+
+    def test_modified_files_use_new_label(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = self._make_memory(tmpdir, "# Memory\n\n## Active Work\n\n")
+            utils.write_compaction_marker(path, "auto", ["scripts/utils.py"], None)
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.assertIn("[Auto-saved context] Files modified in previous context:", content)
+            self.assertIn("scripts/utils.py", content)
+
+    def test_both_prompts_and_files_in_order(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = self._make_memory(tmpdir, "# Memory\n\n## Active Work\n\n")
+            recent_prompts = [("15:00", "Some request")]
+            utils.write_compaction_marker(path, "manual", ["a.py", "b.py"], recent_prompts)
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.assertIn("[Auto-saved context] Recent user requests before compaction:", content)
+            self.assertIn("[Auto-saved context] Files modified in previous context:", content)
+            self.assertLess(
+                content.index("Recent user requests"),
+                content.index("Files modified")
+            )
+
+    def test_empty_timestamp_no_bracket_prefix(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = self._make_memory(tmpdir, "# Memory\n\n## Active Work\n\n")
+            recent_prompts = [("", "Legacy prompt without timestamp")]
+            utils.write_compaction_marker(path, "auto", [], recent_prompts)
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.assertIn("Legacy prompt without timestamp", content)
+            self.assertNotIn("[] Legacy", content)
+
+
 if __name__ == '__main__':
     unittest.main()

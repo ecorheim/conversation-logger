@@ -18,7 +18,7 @@ from utils import (
     resolve_log_path, ensure_markdown_header, ensure_config,
     get_context_keeper_config, get_memory_path,
     read_active_work, write_compaction_marker,
-    extract_modified_files, build_restore_context
+    extract_modified_files, build_restore_context, extract_recent_prompts
 )
 
 # Ensure stdout/stderr can handle Unicode on Windows
@@ -135,7 +135,14 @@ def handle_pre_compact(input_data, log_file, log_format, log_dir, session_id, cw
                     mf.write("# Memory\n\n## Active Work\n\n")
             transcript_path = input_data.get("transcript_path", "")
             modified_files = extract_modified_files(transcript_path) if transcript_path else []
-            write_compaction_marker(memory_file, trigger, modified_files)
+            temp_data = read_temp_session(session_id)
+            recent_prompts = []
+            if temp_data:
+                log_file_path = temp_data.get("log_file_path", "")
+                log_fmt = temp_data.get("log_format", "text")
+                if log_file_path and os.path.isfile(log_file_path):
+                    recent_prompts = extract_recent_prompts(log_file_path, log_fmt)
+            write_compaction_marker(memory_file, trigger, modified_files, recent_prompts)
     except Exception as e:
         print(f"Warning: context-keeper error in PreCompact: {e}", file=sys.stderr)
 
