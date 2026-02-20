@@ -91,7 +91,7 @@ def ensure_config(cwd):
     default = {
         "log_format": "text",
         "context_keeper": {
-            "enabled": True,
+            "enabled": False,
             "scope": "project"
         }
     }
@@ -218,7 +218,7 @@ def ensure_markdown_header(f, log_file):
 def get_context_keeper_config(cwd):
     """Get context-keeper config from conversation-logger config files.
     Returns: {"enabled": bool, "scope": str}
-    Default: {"enabled": True, "scope": "user"}
+    Default: {"enabled": False, "scope": "project"}
     ENV (CONVERSATION_LOG_FORMAT) does not affect context_keeper settings.
     """
     for path in [
@@ -237,10 +237,10 @@ def get_context_keeper_config(cwd):
             if scope not in ("user", "project", "local"):
                 print(f"Warning: invalid context_keeper scope '{scope}', using 'project'", file=sys.stderr)
                 scope = "project"
-            return {"enabled": ck.get("enabled", True), "scope": scope}
+            return {"enabled": ck.get("enabled", False), "scope": scope}
         except (json.JSONDecodeError, IOError):
             continue
-    return {"enabled": True, "scope": "project"}
+    return {"enabled": False, "scope": "project"}
 
 
 def get_memory_path(cwd, scope="user"):
@@ -288,8 +288,9 @@ def read_active_work(memory_file):
         return ""
 
 
-def write_compaction_marker(memory_file, trigger, modified_files, recent_prompts=None):
+def write_compaction_marker(memory_file, trigger, modified_files=None):
     """Insert compaction marker into ## Active Work section of MEMORY.md.
+    Removes previous compaction markers to prevent accumulation.
     Creates the section if it doesn't exist. Uses atomic write (temp + os.replace).
     """
     try:
@@ -305,25 +306,51 @@ def write_compaction_marker(memory_file, trigger, modified_files, recent_prompts
 
     def _marker_lines():
         result = [marker + "\n"]
-        if recent_prompts:
-            result.append("- [Auto-saved context] Recent user requests before compaction:\n")
-            for ts, text in recent_prompts:
-                ts_prefix = f"[{ts}] " if ts else ""
-                result.append(f"  - {ts_prefix}{text}\n")
         if modified_files:
             result.append("- [Auto-saved context] Files modified in previous context:\n")
             for fp in modified_files:
                 result.append(f"  - {fp}\n")
         return result
 
+    def _clean_markers(section_lines):
+        """Remove previous compaction marker blocks from Active Work section lines."""
+        cleaned = []
+        skip_marker = False
+        for line in section_lines:
+            if line.strip().startswith("<!-- compaction:"):
+                skip_marker = True
+                continue
+            if skip_marker:
+                if line.startswith("- [Auto-saved") or line.startswith("  - "):
+                    continue
+                skip_marker = False
+            cleaned.append(line)
+        return cleaned
+
     new_lines = []
     if any(line.startswith("## Active Work") for line in lines):
-        inserted = False
+        in_active = False
+        active_section = []
+        before_active = []
+        after_active = []
+        header_line = None
+
         for line in lines:
-            new_lines.append(line)
-            if not inserted and line.startswith("## Active Work"):
-                new_lines.extend(_marker_lines())
-                inserted = True
+            if not in_active and line.startswith("## Active Work"):
+                in_active = True
+                header_line = line
+            elif in_active and line.startswith("## ") and not line.startswith("## Active Work"):
+                in_active = False
+                after_active.append(line)
+            elif in_active:
+                active_section.append(line)
+            elif header_line is None:
+                before_active.append(line)
+            else:
+                after_active.append(line)
+
+        cleaned_active = _clean_markers(active_section)
+        new_lines = before_active + [header_line] + _marker_lines() + cleaned_active + after_active
     else:
         new_lines = list(lines)
         if new_lines and not new_lines[-1].endswith('\n'):
@@ -379,62 +406,27 @@ def extract_modified_files(transcript_path, max_lines=100, max_files=20):
         return []
 
 
-def extract_recent_prompts(log_file_path, log_format, max_prompts=3, max_length=200):
-    """Extract last N user prompts from conversation log file.
-    Returns: list of (timestamp_str, truncated_prompt_text) tuples.
-    """
-    import re
-    if not log_file_path or not os.path.isfile(log_file_path):
-        return []
-    try:
-        with open(log_file_path, 'rb') as f:
-            f.seek(0, 2)
-            file_size = f.tell()
-            read_size = min(65536, file_size)
-            f.seek(-read_size, 2)
-            tail = f.read().decode('utf-8', errors='replace')
-    except (IOError, OSError):
-        return []
-
-    results = []
-    if log_format == "markdown":
-        pattern = re.compile(
-            r'## \U0001f464 User \u2014 (\d{2}:\d{2}:\d{2})\n\n(.*?)(?=\n---|\n## |\n> \*\*|$)',
-            re.DOTALL
-        )
-        for m in pattern.finditer(tail):
-            ts = m.group(1)
-            text = m.group(2).strip()
-            if len(text) > max_length:
-                text = text[:max_length] + "..."
-            results.append((ts, text))
-    else:
-        pattern = re.compile(
-            r'\U0001f464 USER(?:\s*\((\d{2}:\d{2}:\d{2})\))?:\n(.*?)\n-{3,}',
-            re.DOTALL
-        )
-        for m in pattern.finditer(tail):
-            ts = m.group(1) or ""
-            text = m.group(2).strip()
-            if len(text) > max_length:
-                text = text[:max_length] + "..."
-            results.append((ts, text))
-
-    return results[-max_prompts:] if len(results) > max_prompts else results
-
-
 def build_restore_context(memory_file, source):
     """Build additionalContext string for SessionStart hook.
-    Returns context string, or None if nothing to restore.
+    Always returns a string with the Active Work maintenance directive.
     """
+    directive = (
+        "IMPORTANT: Maintain the ## Active Work section of %s as you work. "
+        "Update when: starting tasks, reaching milestones, completing work. "
+        "Format each entry: `- [Goal] | [Progress] | [Next Step]`. "
+        "This is your recovery anchor — if context is compacted, re-read this file to recover work state."
+    ) % memory_file
+
     if not os.path.isfile(memory_file):
-        return None
+        return f"[Context Keeper] Session source: {source}.\n{directive}"
+
     active_work = read_active_work(memory_file)
     if active_work:
         return (
             f"[Context Keeper] Session source: {source}. "
-            f"Active work detected from previous session:\n{active_work}\n"
-            f"Read the full MEMORY.md and referenced topic files for complete context before continuing."
+            f"Active work from previous session:\n{active_work}\n"
+            f"Read the full MEMORY.md and referenced topic files for complete context before continuing.\n"
+            f"{directive}"
         )
     try:
         with open(memory_file, 'r', encoding='utf-8') as f:
@@ -443,8 +435,9 @@ def build_restore_context(memory_file, source):
             return (
                 f"[Context Keeper] Session source: {source}. "
                 f"MEMORY.md exists ({line_count} lines) but no Active Work section found. "
-                f"Read MEMORY.md if you need project context."
+                f"Read MEMORY.md if you need project context.\n"
+                f"{directive}"
             )
     except (IOError, OSError):
         pass
-    return None
+    return f"[Context Keeper] Session source: {source}.\n{directive}"
