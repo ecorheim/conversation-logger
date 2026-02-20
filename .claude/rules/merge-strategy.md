@@ -57,7 +57,7 @@ MAIN_VERSION=$(git show main:.claude-plugin/plugin.json | python -c "import sys,
 
 if [ "$DEV_VERSION" = "$MAIN_VERSION" ]; then
   echo "ERROR: dev version ($DEV_VERSION) is the same as main ($MAIN_VERSION)."
-  echo "Bump the version in .claude-plugin/plugin.json and CHANGELOG.md before merging."
+  echo "Bump the version in .claude-plugin/plugin.json and CHANGELOG.md, then amend the last commit before merging."
   exit 1
 fi
 ```
@@ -69,29 +69,43 @@ fi
 - [ ] `CHANGELOG.md` has a new version entry matching the bumped version
 - [ ] Version follows [Semantic Versioning](https://semver.org/): patch for fixes, minor for features, major for breaking changes
 
+## Version Bump Workflow
+
+Version bump is **not a separate commit**. After completing and committing the meaningful work, amend that commit to include the version files:
+
+```bash
+# 1. Convert CHANGELOG.md [Unreleased] → [x.y.z] - YYYY-MM-DD
+# 2. Update .claude-plugin/plugin.json and marketplace.json
+# 3. Amend the last commit (no message change)
+git add CHANGELOG.md .claude-plugin/plugin.json .claude-plugin/marketplace.json
+git commit --amend --no-edit
+git push private dev --force-with-lease
+```
+
+The meaningful commit message is preserved. The version files are bundled in without a separate housekeeping commit.
+
 ## Commit Message
 
-The merge commit on `main` must use the **last meaningful commit message from dev** — that is, the commit just before the version bump (`🔧 chore: bump version to x.y.z`). The version bump is always the final housekeeping commit on dev before merging, so the merge commit should reflect the actual change, not the bump.
+The merge commit on `main` uses the **last dev commit message directly** — version files are already included in that commit via amend, so no skipping is needed.
 
 ```bash
 # Find the right commit message:
 git log dev --oneline
 # Example output:
-#   496d4ce 🔧 chore: bump version to 0.4.5          ← skip this
-#   1c686d4 🔧 chore: change context-keeper default scope from user to project  ← use this
+#   1c686d4 🐛 fix: resolve tool rejection misclassification  ← use this (includes version bump via amend)
 ```
 
 ```
 ❌ 🔀 merge: v0.2.2 fix tool rejection ...
-❌ 🔧 chore: bump version to 0.4.5   (version bump — not the meaningful change)
+❌ 🔧 chore: bump version to 0.4.5
 ✅ 🐛 fix: resolve tool rejection misclassification ...
 ✅ 🔧 chore: change context-keeper default scope from user to project
 ```
 
 In step 5 of the Merge Procedure, use:
 ```bash
-# Get the commit before the version bump (skip=1)
-git log dev --skip=1 -1 --pretty=format:"%s%n%n%b"
+# Get the last dev commit (no skip needed — version bump is already amended in)
+git log dev -1 --pretty=format:"%s%n%n%b"
 ```
 
 ## Merge Procedure
@@ -112,8 +126,8 @@ git diff --cached --name-only | grep -vE "$ALLOWED" | xargs -r git rm --cached
 # 4. Remove non-allowlisted files left on disk
 find . -maxdepth 3 -not -path './.git/*' -type f | sed 's|^\./||' | grep -vE "$ALLOWED" | xargs -r rm -f
 
-# 5. Commit using the message from the last meaningful dev commit (before version bump)
-git commit -m "<copy message of the commit just before the version bump, including gitmoji, subject, and body>"
+# 5. Commit using the last dev commit message (version bump already included via amend)
+git commit -m "<copy the last dev commit message verbatim, including gitmoji, subject, and body>"
 
 # 6. Create version tag on the merge commit
 VERSION=$(python -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])")
@@ -135,7 +149,7 @@ git checkout dev
 2. `--no-commit`: Stop before committing to allow modifications
 3. Unstage non-allowlisted files using the `ALLOWED` regex pattern (plugin structure only)
 4. Delete non-allowlisted files from disk to prevent checkout conflicts
-5. Commit message copies the last **meaningful** dev commit verbatim (gitmoji + type + subject + body) — skip the version bump commit, which is always the final dev commit before merging
+5. Commit message copies the last dev commit verbatim — version bump is already part of that commit (amended in before merge), no separate bump commit to skip
 6. Create annotated tag `v<version>` on the merge commit (e.g., `v0.2.2`)
 7. Push main branch to origin (public) and private
 8. Push version tag to both remotes
