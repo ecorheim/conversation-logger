@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.9] - 2026-02-23
+
+### Fixed
+- Fix new log files created when temp session is lost during a long session
+  - When the temp session cache is missing (e.g., cleaned up after 1 hour of inactivity, or lost due to a race condition), the existing log file for the session is now located by searching the log directory for a matching session ID
+  - If found, the existing file is reused and the temp session cache is restored to avoid repeated searches
+  - Previously, any temp session loss caused a new log file to be created, splitting a single session across multiple files
+
 ## [0.4.8] - 2026-02-20
 
 ### Changed
