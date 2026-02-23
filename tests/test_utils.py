@@ -258,6 +258,78 @@ class TestResolveLogPath(unittest.TestCase):
                 self.assertEqual(log_format, "text")
                 self.assertTrue(log_file.endswith(".txt"))
 
+    def test_finds_existing_log_when_temp_session_missing(self):
+        """When temp_session is missing but a log file exists, returns existing file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir, "CONVERSATION_LOG_FORMAT": ""}):
+                log_dir = utils.get_log_dir(tmpdir)
+                existing = os.path.join(log_dir, "2026-01-01_10-00-00_sid-ex_conversation-log.txt")
+                with open(existing, 'w') as f:
+                    f.write("existing content")
+                log_file, log_format, _ = utils.resolve_log_path(tmpdir, "sid-ex")
+                self.assertEqual(log_file, existing)
+                self.assertEqual(log_format, "text")
+
+    def test_detects_text_format_from_txt_extension(self):
+        """.txt existing file returns 'text' format."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir, "CONVERSATION_LOG_FORMAT": ""}):
+                log_dir = utils.get_log_dir(tmpdir)
+                existing = os.path.join(log_dir, "2026-01-01_10-00-00_sid-txt_conversation-log.txt")
+                with open(existing, 'w') as f:
+                    f.write("x")
+                _, log_format, _ = utils.resolve_log_path(tmpdir, "sid-txt")
+                self.assertEqual(log_format, "text")
+
+    def test_detects_markdown_format_from_md_extension(self):
+        """.md existing file returns 'markdown' format."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir, "CONVERSATION_LOG_FORMAT": ""}):
+                log_dir = utils.get_log_dir(tmpdir)
+                existing = os.path.join(log_dir, "2026-01-01_10-00-00_sid-md_conversation-log.md")
+                with open(existing, 'w') as f:
+                    f.write("x")
+                _, log_format, _ = utils.resolve_log_path(tmpdir, "sid-md")
+                self.assertEqual(log_format, "markdown")
+
+    def test_restores_temp_session_on_file_search_hit(self):
+        """When existing file found, temp_session is restored for future calls."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir, "CONVERSATION_LOG_FORMAT": ""}):
+                log_dir = utils.get_log_dir(tmpdir)
+                existing = os.path.join(log_dir, "2026-01-01_10-00-00_sid-rs_conversation-log.txt")
+                with open(existing, 'w') as f:
+                    f.write("x")
+                utils.resolve_log_path(tmpdir, "sid-rs")
+                temp_data = utils.read_temp_session("sid-rs")
+                self.assertIsNotNone(temp_data)
+                self.assertEqual(temp_data["log_file_path"], existing)
+
+    def test_prefers_earliest_file_when_multiple_exist(self):
+        """When multiple log files exist for a session, returns the earliest one."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"HOME": tmpdir, "CONVERSATION_LOG_FORMAT": ""}):
+                log_dir = utils.get_log_dir(tmpdir)
+                first = os.path.join(log_dir, "2026-01-01_10-00-00_sid-multi_conversation-log.txt")
+                second = os.path.join(log_dir, "2026-01-01_11-00-00_sid-multi_conversation-log.txt")
+                for f_path in [first, second]:
+                    with open(f_path, 'w') as f:
+                        f.write("x")
+                log_file, _, _ = utils.resolve_log_path(tmpdir, "sid-multi")
+                self.assertEqual(log_file, first)
+
+
+# ---------------------------------------------------------------------------
+# _find_existing_log
+# ---------------------------------------------------------------------------
+class TestFindExistingLog(unittest.TestCase):
+
+    def test_returns_none_for_empty_session_id(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_dir = utils.get_log_dir(tmpdir)
+            result = utils._find_existing_log(log_dir, "")
+            self.assertIsNone(result)
+
 
 # ---------------------------------------------------------------------------
 # ensure_markdown_header

@@ -189,12 +189,39 @@ def calculate_fence(content):
     return '`' * max(max_consecutive + 1, 3)  # minimum 3
 
 
+def _find_existing_log(log_dir, session_id):
+    """Find existing log file for session_id in log_dir. Returns path or None."""
+    if not session_id or not os.path.isdir(log_dir):
+        return None
+    pattern = os.path.join(log_dir, f"*_{session_id}_conversation-log.*")
+    matches = glob.glob(pattern)
+    if not matches:
+        return None
+    matches.sort()  # 시간순 정렬 (YYYY-MM-DD_HH-MM-SS 접두사)
+    return matches[0]  # 가장 먼저 생성된 파일 반환
+
+
 def resolve_log_path(cwd, session_id):
-    """Resolve log file path: try temp_session first, fall back to config chain."""
+    """Resolve log file path: try temp_session first, search existing files, fall back to new file."""
     log_dir = get_log_dir(cwd)
     temp_data = read_temp_session(session_id)
     if temp_data and temp_data.get("log_file_path"):
         return temp_data["log_file_path"], temp_data.get("log_format", "text"), log_dir
+    # Fallback 1: 기존 로그 파일 검색
+    existing = _find_existing_log(log_dir, session_id)
+    if existing:
+        fmt = "markdown" if existing.endswith(".md") else "text"
+        try:
+            write_temp_session(session_id, {
+                "session_id": session_id,
+                "cwd": cwd,
+                "log_format": fmt,
+                "log_file_path": existing
+            })
+        except (IOError, OSError):
+            pass  # 비핵심: 다음 호출에서 재검색
+        return existing, fmt, log_dir
+    # Fallback 2: 새 파일 생성 (세션 최초 호출)
     log_format = get_log_format(cwd)
     log_file = get_log_file_path(log_dir, session_id, log_format)
     return log_file, log_format, log_dir
