@@ -440,7 +440,11 @@ def build_restore_context(memory_file, source):
     directive = (
         "IMPORTANT: Maintain the ## Active Work section of %s as you work. "
         "Update when: starting tasks, reaching milestones, completing work. "
-        "Format each entry: `- [Goal] | [Progress] | [Next Step]`. "
+        "For each task, record: goal, current progress, key decisions made, "
+        "files modified, blockers if any, and next step. "
+        "Use multi-line entries when context is needed — a task may span 3-5 lines. "
+        "Also maintain other MEMORY.md sections (Decisions & Conventions, Resolved Issues, User Preferences) "
+        "with enough detail that a new session can understand the why, not just the what. "
         "This is your recovery anchor — if context is compacted, re-read this file to recover work state."
     ) % memory_file
 

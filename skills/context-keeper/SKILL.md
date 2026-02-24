@@ -58,18 +58,28 @@ Additionally, update the **Active Work** section:
 
 Before writing to memory, ask these three questions:
 1. "Would a different Claude understand this without additional context?"
-2. "Is this semantically compressed — meaning, not a log dump?"
+2. "Is this structured and concise — not verbose, but not so terse that key context is lost?"
 3. "Does this add information not already present in memory?"
 
 If any answer is no, revise before recording.
 
 ## MEMORY.md Structure Guide
 
-Keep MEMORY.md under 200 lines. Use this section structure:
+Keep MEMORY.md under 600 lines. Use this section structure:
 
 ### Active Work (Recovery Anchor)
-For each active task, record on a single line:
-`- [Goal] | [Progress] | [Next Step] | See: [topic-file.md]`
+For each active task, record with enough detail to resume without re-reading code:
+```
+- **[Goal]**
+  Status: [current progress]
+  Context: [why this task exists, key background]
+  Decisions: [key choices made and why]
+  Modified: [files changed, if relevant]
+  Blockers: [current blockers, if any]
+  Next: [concrete next step]
+  See: [topic-file.md] (if detailed notes exist)
+```
+Not all fields are required — simple tasks may need only 2-3 lines.
 
 This section is the primary recovery point after compaction or new sessions.
 
@@ -77,10 +87,12 @@ This section is the primary recovery point after compaction or new sessions.
 Architecture summary, key directories, tech stack. Brief.
 
 ### Decisions & Conventions
-Verified decisions and coding standards. One line each.
+Verified decisions and coding standards. Include the why, not just the what.
+Format: `- [Decision]: [why it was made, alternatives rejected]`
 
 ### Resolved Issues
-`- Problem → Cause → Solution` format. One line each.
+`- Problem → Cause → Solution` format. Include enough detail to avoid re-diagnosing.
+Add context when the cause was non-obvious or the fix was non-trivial.
 
 ### User Preferences
 Communication style, workflow habits, tool preferences.
@@ -159,7 +171,7 @@ if you need to review what was discussed in a previous session.
 ## Maintenance
 
 - On task completion: move from Active Work to Resolved Issues (if noteworthy), or remove
-- When MEMORY.md approaches 200 lines: move detailed content to topic files
+- When MEMORY.md approaches 600 lines: move detailed content to topic files
 - Periodically remove outdated entries and consolidate related items
 - When a topic file is no longer referenced, consider archiving or deleting it
 
