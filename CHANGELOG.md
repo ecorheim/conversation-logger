@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.0] - 2026-02-24
+
+### Changed
+- Enrich MEMORY.md maintenance instructions for better session recovery
+  - Active Work entries now support multi-line format (goal, status, context, decisions, modified files, blockers, next step)
+  - Decisions & Conventions and Resolved Issues entries now include the why, not just the what
+  - MEMORY.md line budget increased from 200 to 600 to accommodate richer entries
+  - Quality Gate reworded: "structured and concise" instead of "semantically compressed"
+
 ## [0.4.9] - 2026-02-23
 
 ### Fixed

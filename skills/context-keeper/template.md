@@ -9,8 +9,18 @@ Claude should adapt this to each project's needs.
 # Project Memory
 
 ## Active Work
-- Implement user auth | 70% done, JWT middleware complete | Next: add refresh token logic | See: auth-design.md
-- Fix CI pipeline | Investigating | Next: check Node version mismatch | See: debugging.md
+- **Implement user auth**
+  Status: 70% done — JWT middleware complete, refresh token logic pending
+  Context: Stateless auth required for horizontal scaling; sessions rejected early
+  Decisions: jsonwebtoken over passport-jwt (simpler API, fewer deps)
+  Modified: src/middleware/auth.js, src/routes/auth.js
+  Next: add refresh token endpoint and rotation logic
+  See: auth-design.md
+
+- **Fix CI pipeline**
+  Status: Investigating Node version mismatch between local (20) and CI (18)
+  Context: Tests pass locally but fail on GitHub Actions with ESM import errors
+  Next: pin Node version in .github/workflows/ci.yml to 20
 
 ## Project Overview
 - Express.js REST API with PostgreSQL
@@ -18,13 +28,13 @@ Claude should adapt this to each project's needs.
 - Build: `npm run build` | Test: `npm test` | Lint: `npm run lint`
 
 ## Decisions & Conventions
-- JWT for auth (not sessions) — stateless scaling requirement
-- Snake_case for DB columns, camelCase for JS variables
-- All API responses use { data, error, meta } envelope
+- JWT for auth (not sessions): stateless scaling requirement; express-session rejected due to horizontal scaling constraints
+- Snake_case for DB columns, camelCase for JS variables: matches ORM convention
+- All API responses use { data, error, meta } envelope: decided in v1 design, enforced in src/middleware/response.js
 
 ## Resolved Issues
-- Login 500 error → missing DATABASE_URL env var → added to .env.example
-- Test timeout → jest default 5s too short for DB tests → set to 15s in jest.config
+- Login 500 error → missing DATABASE_URL env var → added to .env.example and documented in README setup section
+- Test timeout → jest default 5s too short for DB tests (connection pool spin-up) → set testTimeout to 15s in jest.config
 
 ## User Preferences
 - Prefers concise explanations, minimal boilerplate
@@ -55,9 +65,10 @@ commit messages with emoji things.
 ```
 
 Problems with the bad example:
-- Narrative style wastes lines (not semantically compressed)
+- Narrative style wastes lines (not structured and concise)
 - Contains debugging journey (should only record the solution)
 - Includes speculation ("I think maybe")
 - No structure for quick scanning
 - No Active Work section (no recovery anchor)
+- Missing key details (files modified, alternatives rejected, blockers)
 - No topic file references
