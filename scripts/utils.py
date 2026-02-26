@@ -150,6 +150,17 @@ def delete_temp_session(session_id, temp_dir=None):
         os.remove(temp_file)
 
 
+def touch_temp_session(session_id, temp_dir=None):
+    """Update mtime of temp session file to prevent stale cleanup."""
+    if temp_dir is None:
+        temp_dir = get_temp_session_dir()
+    temp_file = os.path.join(temp_dir, f".temp_session_{session_id}.json")
+    try:
+        os.utime(temp_file, None)
+    except OSError:
+        pass
+
+
 def cleanup_stale_temp_files(temp_dir=None, max_age_seconds=3600):
     """Remove temp session files older than max_age_seconds (default 1 hour)."""
     if temp_dir is None:
