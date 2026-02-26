@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils import (
     setup_encoding, get_log_dir, get_log_file_path, get_log_format,
     read_temp_session, cleanup_stale_temp_files, debug_log, calculate_fence,
-    resolve_log_path, ensure_markdown_header
+    resolve_log_path, ensure_markdown_header, touch_temp_session
 )
 
 # Ensure stdout/stderr can handle Unicode on Windows
@@ -394,6 +394,7 @@ def log_response():
                 f.write(f"{'='*80}\n\n")
 
         # Clean up stale temporary files
+        touch_temp_session(session_id)
         cleanup_stale_temp_files()
 
         print("Response logged")

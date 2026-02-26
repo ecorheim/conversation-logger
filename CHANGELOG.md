@@ -1,6 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [0.5.1] - 2026-02-26
+
+### Fixed
+- Fix log file split across multiple files when a session turn lasts over 1 hour
+  - The Stop hook now refreshes the temp session cache timestamp before running stale cleanup, preventing the active session from being evicted by the 1-hour threshold
+  - Previously, long turns (>1 hour) caused the temp session file to appear stale, leading to its deletion and a new log file being created on the next turn
 
 ## [0.5.0] - 2026-02-24
 

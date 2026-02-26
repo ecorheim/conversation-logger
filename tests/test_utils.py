@@ -320,6 +320,59 @@ class TestResolveLogPath(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Tier 3.11: touch_temp_session
+# ---------------------------------------------------------------------------
+class TestTouchTempSession(unittest.TestCase):
+
+    def test_touch_updates_mtime(self):
+        """touch_temp_session updates mtime to approximately now."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            session_id = "touch-test-1"
+            temp_file = os.path.join(tmpdir, f".temp_session_{session_id}.json")
+            with open(temp_file, 'w') as f:
+                f.write('{"key": "value"}')
+            old_time = time.time() - 7200
+            os.utime(temp_file, (old_time, old_time))
+            before = time.time()
+            utils.touch_temp_session(session_id, temp_dir=tmpdir)
+            after = time.time()
+            new_mtime = os.path.getmtime(temp_file)
+            # Allow 1s tolerance for filesystem clock resolution
+            self.assertGreaterEqual(new_mtime, before - 1.0)
+            self.assertLessEqual(new_mtime, after + 1)
+
+    def test_touch_nonexistent_is_noop(self):
+        """touch_temp_session on missing file raises no error."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            utils.touch_temp_session("nonexistent-session", temp_dir=tmpdir)
+
+    def test_touched_session_survives_cleanup(self):
+        """Session file touched after 2h-old write is not removed by cleanup."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            session_id = "touch-test-3"
+            temp_file = os.path.join(tmpdir, f".temp_session_{session_id}.json")
+            with open(temp_file, 'w') as f:
+                f.write('{}')
+            old_time = time.time() - 7200
+            os.utime(temp_file, (old_time, old_time))
+            utils.touch_temp_session(session_id, temp_dir=tmpdir)
+            utils.cleanup_stale_temp_files(temp_dir=tmpdir)
+            self.assertTrue(os.path.exists(temp_file))
+
+    def test_touch_preserves_content(self):
+        """touch_temp_session does not alter file content."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            session_id = "touch-test-4"
+            temp_file = os.path.join(tmpdir, f".temp_session_{session_id}.json")
+            original = '{"log_file_path": "/some/path.txt", "log_format": "text"}'
+            with open(temp_file, 'w') as f:
+                f.write(original)
+            utils.touch_temp_session(session_id, temp_dir=tmpdir)
+            with open(temp_file, 'r') as f:
+                self.assertEqual(f.read(), original)
+
+
+# ---------------------------------------------------------------------------
 # _find_existing_log
 # ---------------------------------------------------------------------------
 class TestFindExistingLog(unittest.TestCase):
