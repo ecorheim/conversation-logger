@@ -28,7 +28,8 @@ def format_tool_input(tool_name, tool_input):
 
     # Show key parameters
     params = []
-    for key in ['pattern', 'command', 'file_path', 'path', 'query', 'description']:
+    for key in ['pattern', 'command', 'file_path', 'path', 'query', 'description',
+                'old_string', 'new_string', 'content', 'url', 'prompt']:
         if key in tool_input:
             value = tool_input[key]
             if isinstance(value, str):
@@ -76,7 +77,7 @@ def format_tool_input_md(tool_name, tool_input):
 def format_tool_result_md(content):
     """Format tool result as markdown code block with dynamic fence."""
     if not content:
-        return ""
+        return "> *(no output)*"
 
     text = content.strip()
     fence = calculate_fence(text)
@@ -108,7 +109,7 @@ def extract_full_content(entry):
     # Tool result (tool execution output)
     elif entry_type == "tool_result":
         content = entry.get("content", "")
-        if isinstance(content, str) and content.strip():
+        if isinstance(content, str):
             parts.append(("tool_result", content.strip()))
         elif isinstance(content, list):
             texts = []
@@ -226,9 +227,7 @@ def _format_output_markdown(all_outputs):
         elif part_type == "tool_use":
             formatted_parts.append(format_tool_input_md(content["name"], content["input"]))
         elif part_type == "tool_result":
-            md_result = format_tool_result_md(content)
-            if md_result:
-                formatted_parts.append(md_result)
+            formatted_parts.append(format_tool_result_md(content))
         elif part_type == "tool_rejection":
             # Extract text from the formatted string
             if "user message:" in content:
@@ -253,7 +252,7 @@ def _write_followups_text(f, follow_ups):
 
 def _write_followups_markdown(f, follow_ups):
     """Write follow-up interactions in markdown format."""
-    timestamp = datetime.now().strftime('%H:%M:%S')
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     for label, text in follow_ups:
         if label == "answer":
             f.write(f"\n## \U0001f4ac User \u2014 {timestamp}\n")
@@ -381,7 +380,7 @@ def log_response():
 
                 formatted_parts = _format_output_markdown(all_outputs)
                 response_text = "\n\n".join(formatted_parts) if formatted_parts else "[No output found]"
-                f.write(f"\n## \U0001f916 Claude \u2014 {timestamp}\n\n")
+                f.write(f"\n## \U0001f916 Claude \u2014 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
                 f.write(f"{response_text}\n")
             else:
                 full_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')

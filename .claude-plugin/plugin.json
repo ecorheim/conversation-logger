@@ -1,6 +1,6 @@
 {
   "name": "conversation-logger",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Automatically logs Claude Code conversations and maintains session memory continuity. Records prompts and responses chronologically with tool usage tracking. Built-in context-keeper saves and restores work state across sessions.",
   "author": {
     "name": "cruelds"
