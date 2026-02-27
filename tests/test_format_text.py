@@ -55,6 +55,14 @@ class TestFormatToolInput(unittest.TestCase):
         result = log_response_mod.format_tool_input("Custom", {"unknown_key": "val"})
         self.assertIn("...", result)
 
+    def test_old_string_param(self):
+        result = log_response_mod.format_tool_input("Edit", {"old_string": "foo"})
+        self.assertIn("old_string=foo", result)
+
+    def test_url_param(self):
+        result = log_response_mod.format_tool_input("WebFetch", {"url": "https://example.com"})
+        self.assertIn("url=https://example.com", result)
+
 
 # ---------------------------------------------------------------------------
 # Tier 2.5 / 3: format_tool_result — no truncation
@@ -74,6 +82,22 @@ class TestFormatToolResult(unittest.TestCase):
         result = log_response_mod.format_tool_result(lines)
         self.assertIn("line 0", result)
         self.assertIn("line 49", result)
+
+    def test_none_content(self):
+        result = log_response_mod.format_tool_result(None)
+        self.assertIn("(no output)", result)
+
+
+# ---------------------------------------------------------------------------
+# extract_full_content
+# ---------------------------------------------------------------------------
+class TestExtractFullContent(unittest.TestCase):
+
+    def test_empty_tool_result_passes_through(self):
+        """Empty string tool results must not be filtered out during extraction."""
+        entry = {"type": "tool_result", "content": ""}
+        parts = log_response_mod.extract_full_content(entry)
+        self.assertEqual(parts, [("tool_result", "")])
 
 
 # ---------------------------------------------------------------------------

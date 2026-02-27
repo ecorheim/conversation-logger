@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.2] - 2026-02-27
+
+### Fixed
+- Fix empty tool results silently dropped from both text and markdown logs
+  - When a tool produces no output, text logs now show `(no output)` and markdown logs show `> *(no output)*`
+  - Previously, empty tool results were filtered out during content extraction and never reached the formatter
+- Fix 5 tool input parameters missing from text format logs (`old_string`, `new_string`, `content`, `url`, `prompt`)
+  - Text and markdown logs now display the same set of tool parameters for Edit, Write, and WebFetch tools
+- Fix markdown response and follow-up timestamps missing the date component
+  - Markdown logs now record full `YYYY-MM-DD HH:MM:SS` timestamps (matching text format), enabling reliable identification of sessions that span midnight
+
 ## [0.5.1] - 2026-02-26
 
 ### Fixed

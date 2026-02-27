@@ -96,8 +96,9 @@ class TestFormatToolInputMd(unittest.TestCase):
 # ---------------------------------------------------------------------------
 class TestFormatToolResultMd(unittest.TestCase):
 
-    def test_empty_content_returns_empty(self):
-        self.assertEqual(log_response_mod.format_tool_result_md(""), "")
+    def test_empty_content_returns_no_output(self):
+        result = log_response_mod.format_tool_result_md("")
+        self.assertIn("(no output)", result)
 
     def test_normal_text_triple_backtick(self):
         result = log_response_mod.format_tool_result_md("hello world")
@@ -130,6 +131,13 @@ class TestFormatOutputMarkdown(unittest.TestCase):
     def test_interrupt(self):
         result = log_response_mod._format_output_markdown([("interrupt", "  \u23bf  Interrupted")])
         self.assertEqual(result, ["> **Interrupted**"])
+
+    def test_empty_tool_result_not_dropped(self):
+        """Empty tool results must appear in output, not be silently dropped."""
+        outputs = [("tool_use", {"name": "Bash", "input": {"command": "ls"}}),
+                   ("tool_result", "")]
+        result = log_response_mod._format_output_markdown(outputs)
+        self.assertEqual(len(result), 2)
 
 
 # ---------------------------------------------------------------------------
@@ -165,6 +173,14 @@ class TestWriteFollowupsMarkdown(unittest.TestCase):
         output = buf.getvalue()
         self.assertIn("## \U0001f4ac User", output)
         self.assertIn("> **custom label**", output)
+
+    def test_timestamp_includes_date(self):
+        """Markdown followup timestamps must include YYYY-MM-DD date."""
+        import re
+        buf = io.StringIO()
+        log_response_mod._write_followups_markdown(buf, [("answer", "My answer")])
+        output = buf.getvalue()
+        self.assertIsNotNone(re.search(r'\d{4}-\d{2}-\d{2}', output))
 
 
 if __name__ == '__main__':
